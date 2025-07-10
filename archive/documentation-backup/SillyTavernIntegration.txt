@@ -1,0 +1,331 @@
+
+Intégration de SillyTavern dans votre Cluster AutoWeave (Kind)
+
+Ce guide est votre feuille de route, ClaudeCode. Suivez-le pour intégrer SillyTavern, l'interface conversationnelle, dans votre cluster Kind. Chaque étape est pensée pour la clarté et la traçabilité.
+
+Objectifs Clés
+
+    Déployer SillyTavern dans le cluster Kubernetes autoweave.
+
+    Assurer l'accès à son interface web.
+
+    Préparer l'intégration avec votre API AutoWeave.
+
+    Enregistrer chaque action via le DevLogger.milestone pour un suivi précis.
+
+    Mettre à jour le fichier docs/development-progress.md en temps réel.
+
+    Générer un handoff-summary.md en fin de session.
+
+Prérequis : Vérifications Essentielles
+
+ClaudeCode, lancez ces vérifications. Logguez les résultats pour chaque point.
+
+    Cluster Kind autoweave : Assurez-vous qu'il est accessible.
+    Bash
+
+kubectl cluster-info --context kind-autoweave
+# DevLogger: logger.milestone('Phase1', 'Kubernetes cluster check for SillyTavern', 'completed', { clusterName: 'autoweave', status: 'accessible' });
+
+Outils CLI : Confirmez la présence de kubectl, helm, et git.
+Bash
+
+kubectl version --client --short && helm version --short && git --version
+# DevLogger: logger.milestone('Phase1', 'Essential CLI tools check (kubectl, helm, git)', 'completed');
+
+API AutoWeave : Vérifiez qu'elle est prête pour les futures connexions.
+Bash
+
+    # (Lancez-la si nécessaire après le déploiement de SillyTavern)
+    # DevLogger: logger.milestone('Phase2', 'AutoWeave API availability for SillyTavern', 'started', { action: 'manual check after deployment' });
+
+Phase 1 : Déploiement de SillyTavern sur Kubernetes
+
+SillyTavern est une application Node.js. Nous allons la conteneuriser et la déployer avec des manifestes Kubernetes.
+
+1. Créer le Dockerfile pour SillyTavern
+
+Dans autoweave/docker/, créez Dockerfile.sillytavern. Ce fichier permet de construire l'image Docker de SillyTavern.
+Dockerfile
+
+# autoweave/docker/Dockerfile.sillytavern
+FROM node:20-alpine AS builder
+
+RUN npm install -g pnpm
+WORKDIR /app
+COPY . .
+RUN pnpm install --prod --frozen-lockfile
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app .
+EXPOSE 80
+CMD ["node", "server.js"]
+
+Bash
+
+# DevLogger: logger.milestone('Phase1', 'SillyTavern Dockerfile creation', 'completed', { filePath: 'autoweave/docker/Dockerfile.sillytavern' });
+
+2. Cloner SillyTavern et Construire l'Image Docker
+
+Clonez temporairement le dépôt SillyTavern, construisez l'image Docker avec le Dockerfile que vous venez de créer, et chargez-la dans votre cluster Kind.
+Bash
+
+START_TIME=$(date +%s)
+cd /tmp
+git clone https://github.com/SillyTavern/SillyTavern.git
+cd SillyTavern
+
+# Assurez-vous que le chemin vers le Dockerfile est correct.
+docker build -f /home/gontrand/autoweave/docker/Dockerfile.sillytavern -t sillytavern-autoweave:latest .
+kind load docker-image sillytavern-autoweave:latest --name autoweave
+
+cd /home/gontrand/autoweave
+rm -rf /tmp/SillyTavern
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+# DevLogger: logger.milestone('Phase1', 'SillyTavern image build and load to Kind', 'completed', {
+#     imageName: 'sillytavern-autoweave:latest',
+#     durationSeconds: DURATION,
+#     details: 'Cloned SillyTavern, built Docker image, loaded into Kind cluster.'
+# });
+
+Important pour ClaudeCode : Assurez-vous que Docker tourne bien sur votre machine hôte.
+
+3. Créer les Manifestes Kubernetes
+
+Créez sillytavern-manifests.yaml dans autoweave/config/k8s/. Ce fichier définit comment SillyTavern sera déployé dans votre cluster.
+YAML
+
+# autoweave/config/k8s/sillytavern-manifests.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sillytavern
+  namespace: autoweave-system
+  labels:
+    app: sillytavern
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sillytavern
+  template:
+    metadata:
+      labels:
+        app: sillytavern
+    spec:
+      containers:
+      - name: sillytavern
+        image: sillytavern-autoweave:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        env:
+        - name: NODE_ENV
+          value: production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sillytavern-service
+  namespace: autoweave-system
+  labels:
+    app: sillytavern
+spec:
+  selector:
+    app: sillytavern
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+Bash
+
+# DevLogger: logger.milestone('Phase1', 'SillyTavern Kubernetes manifests creation', 'completed', {
+#     filePath: 'autoweave/config/k8s/sillytavern-manifests.yaml',
+#     components: ['Deployment', 'Service'],
+#     persistencyConfigured: 'no_for_initial_test'
+# });
+
+Note pour ClaudeCode : Pour l'instant, la persistance n'est pas configurée. Si vous avez besoin de sauvegarder les données de SillyTavern (personnages, chats), vous devrez ajouter des PersistentVolumeClaims et PersistentVolumes. C'est une étape d'amélioration future.
+
+4. Déployer SillyTavern avec kubectl
+
+Appliquez les manifestes pour déployer SillyTavern dans le namespace autoweave-system.
+Bash
+
+START_TIME=$(date +%s)
+kubectl apply -f autoweave/config/k8s/sillytavern-manifests.yaml
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+# DevLogger: logger.milestone('Phase1', 'SillyTavern Kubernetes deployment initiation', 'completed', {
+#     namespace: 'autoweave-system',
+#     durationSeconds: DURATION,
+#     command: "kubectl apply -f autoweave/config/k8s/sillytavern-manifests.yaml"
+# });
+
+5. Vérifier le Statut du Déploiement
+
+Surveillez les pods pour confirmer que SillyTavern est bien opérationnel.
+Bash
+
+START_TIME=$(date +%s)
+kubectl get pods -n autoweave-system -l app=sillytavern -w
+# Attendez que le pod soit Running et Ready, puis utilisez CTRL+C.
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+# DevLogger:
+# Si le pod est Running/Ready: logger.milestone('Phase1', 'SillyTavern pod readiness check', 'completed', { status: 'pod ready', namespace: 'autoweave-system', durationSeconds: DURATION });
+# Sinon: logger.milestone('Phase1', 'SillyTavern pod readiness check', 'failed', { status: 'pod not ready', namespace: 'autoweave-system', hint: 'Check SillyTavern pod logs: kubectl logs -n autoweave-system -l app=sillytavern' });
+
+Phase 2 : Accéder à l'Interface Web de SillyTavern
+
+Nous allons utiliser un port-forward pour accéder à l'interface de SillyTavern depuis votre machine locale.
+
+1. Effectuer un Port-Forward
+
+Démarrez un tunnel vers le service SillyTavern. Nous utiliserons le port local 8081 pour éviter les conflits avec Appsmith ou kagent UI.
+Bash
+
+START_TIME=$(date +%s)
+SERVICE_NAME_ST=$(kubectl get svc -n autoweave-system -l app=sillytavern -o jsonpath='{.items[0].metadata.name}')
+
+pkill -f "kubectl port-forward -n autoweave-system svc/$SERVICE_NAME_ST 8081:80" || true
+
+kubectl port-forward -n autoweave-system svc/$SERVICE_NAME_ST 8081:80 > /dev/null 2>&1 &
+PORT_FORWARD_PID_ST=$!
+echo $PORT_FORWARD_PID_ST > /tmp/sillytavern-portforward.pid
+
+sleep 5
+
+if ps -p $PORT_FORWARD_PID_ST > /dev/null; then
+    ACCESSIBLE_URL_ST="http://localhost:8081"
+    STATUS_ST="completed"
+else
+    ACCESSIBLE_URL_ST="N/A"
+    STATUS_ST="failed"
+fi
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+# DevLogger: logger.milestone('Phase2', 'SillyTavern UI port-forward setup', STATUS_ST, {
+#     service: SERVICE_NAME_ST, localPort: 8081, remotePort: 80, pid: PORT_FORWARD_PID_ST,
+#     accessibleURL: ACCESSIBLE_URL_ST, durationSeconds: DURATION, hint: 'Use kill $(cat /tmp/sillytavern-portforward.pid) to stop'
+# });
+
+2. Accéder et Explorer l'Interface
+
+Ouvrez votre navigateur web et accédez à http://localhost:8081. Prenez le temps d'explorer les réglages, les options de connexion API, et le système d'extensions.
+Bash
+
+# DevLogger: logger.milestone('Phase2', 'SillyTavern UI initial access and exploration', 'completed', {
+#     accessURL: 'http://localhost:8081',
+#     task: 'Manual UI exploration, understand settings and extensions'
+# });
+
+Phase 3 : Bases d'Intégration avec l'API AutoWeave
+
+Cette phase est cruciale pour que SillyTavern puisse interagir avec vos agents AutoWeave.
+
+1. Configurer SillyTavern pour Utiliser votre LLM Orchestré par AutoWeave
+
+Dans l'interface de SillyTavern, naviguez vers les Réglages (Settings) puis API Connections.
+
+    Type de Proxy : Choisissez "OpenAI" ou un type similaire qui correspond à l'API de votre LLM.
+
+    URL d'API : C'est ici que vous ferez le lien vers votre API AutoWeave. L'idée est que SillyTavern envoie ses requêtes de chat à un endpoint que votre API AutoWeave exposera, et AutoWeave se chargera de la communication réelle avec le LLM via votre AgentWeaver.
+
+        Utilisez l'IP du Gateway Docker Kind pour atteindre votre API AutoWeave locale (http://<IP_DU_GATEWAY_DOCKER_KIND>:3000).
+
+        Vous devrez créer un nouvel endpoint dans votre API AutoWeave (ex: /api/chat) qui reçoit la requête de SillyTavern, la traite avec votre AgentWeaver, et renvoie la réponse.
+
+        Exemple d'URL : http://<votre_docker_gateway_ip>:3000/api/chat (où /api/chat est un endpoint que vous implémenterez).
+
+Bash
+
+# DevLogger: logger.milestone('Phase3', 'SillyTavern LLM API connection setup', 'completed', {
+#     llmProxyType: 'OpenAI',
+#     apiEndpoint: '<URL configurée pour votre API AutoWeave>',
+#     details: 'Configured SillyTavern to use AutoWeave API as LLM proxy.'
+# });
+
+2. Définir des Outils SillyTavern pour Appeler l'API AutoWeave
+
+SillyTavern permet d'ajouter des outils personnalisés via des extensions JavaScript. Ces outils seront les ponts entre l'interface conversationnelle et votre backend AutoWeave.
+
+    Créer un Fichier d'Extension : Accédez au répertoire de SillyTavern dans le pod (kubectl exec -it <sillytavern-pod-name> -n autoweave-system -- bash) ou mettez à jour votre image Docker. Créez un fichier JS sous public/extensions/ (ex: autoweave-tools.js).
+
+    Logique d'Appel API : Dans ce fichier, écrivez des fonctions JavaScript qui utilisent fetch pour appeler les endpoints de votre API AutoWeave (ex: /api/agents pour créer un agent).
+    JavaScript
+
+    // Dans SillyTavern/public/extensions/autoweave-tools.js (exemple simple)
+    async function createAutoWeaveAgent(description) {
+        const autoweaveApiUrl = 'http://<IP_DU_GATEWAY_DOCKER_KIND>:3000/api/agents';
+        try {
+            const response = await fetch(autoweaveApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: description })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                return `Agent "${data.workflow.name}" (ID: ${data.workflow.id}) créé. Statut: ${data.deployment.status}.`;
+            } else {
+                return `Erreur: ${data.error || response.statusText}`;
+            }
+        } catch (error) {
+            return `Erreur réseau: ${error.message}`;
+        }
+    }
+
+    // Exportez la fonction pour qu'elle soit visible par SillyTavern
+    // Le mécanisme exact dépend des versions et des pratiques de SillyTavern
+    // Vous devrez peut-être la lier à un bouton ou à une commande / dans l'UI.
+
+    Activer l'Extension : Dans l'interface de SillyTavern, activez votre nouvelle extension dans les réglages.
+
+    Instruire l'Agent LLM : Configurez les "règles" ou le "persona" de l'agent LLM dans SillyTavern pour qu'il sache qu'il dispose de l'outil createAutoWeaveAgent et quand l'utiliser en réponse aux requêtes utilisateur (ex: "Crée un agent qui surveille la température du serveur").
+
+Bash
+
+# DevLogger: logger.milestone('Phase3', 'SillyTavern custom tool development for AutoWeave API', 'started', {
+#     toolName: 'createAutoWeaveAgent',
+#     targetAPI: 'AutoWeave /api/agents',
+#     filePath: 'SillyTavern/public/extensions/autoweave-tools.js'
+# });
+
+Points de Contrôle Obligatoires pour ClaudeCode (Synthèse)
+
+ClaudeCode, assurez-vous que les logs suivants sont bien dans votre development-progress.md pour cette session :
+
+    Phase 1 (Déploiement) : Logs de toutes les étapes de vérification des prérequis, création du Dockerfile, build/load de l'image, création des manifestes Kubernetes, et déploiement/readiness du pod SillyTavern.
+
+    Phase 2 (Accès UI) : Logs du port-forward et de l'exploration initiale de l'interface SillyTavern.
+
+    Phase 3 (Intégration API) : Logs de la configuration de la connexion LLM dans SillyTavern (pointant vers AutoWeave API) et le démarrage du développement de l'outil personnalisé createAutoWeaveAgent.
+
+Fin de Session pour ClaudeCode
+
+ClaudeCode, créez ou mettez à jour le handoff-summary.md dans le répertoire principal (/home/gontrand/autoweave/).
+
+Le contenu doit inclure :
+
+    Tâches Terminées (✅ Completed Tasks) : Listez les succès, comme le déploiement de SillyTavern, l'accès UI, et le début de l'intégration API.
+
+    Travaux en Cours (🚧 In Progress) : Décrivez l'état de l'intégration de l'outil createAutoWeaveAgent et l'endpoint /api/chat dans AutoWeave.
+
+    Prochaines Étapes (📋 Next Instance TODO) : Mettez l'accent sur la finalisation de l'intégration des outils, le développement de votre Agent de Commande dans AutoWeave, et le test de bout en bout de la création d'agent depuis SillyTavern.
+
+    Fichiers Modifiés (📁 Modified Files) : Listez tous les fichiers pertinents, y compris le Dockerfile, les manifestes Kubernetes, et les fichiers d'extension SillyTavern.
+
+    Problèmes Connus (⚠️ Known Issues) : Notez toute difficulté rencontrée, comme les adresses IP du Gateway Docker ou la persistance.
+
+    État de l'Environnement (🔧 Environment Status) : Résumez l'état des composants (Kind, kagent, Appsmith, SillyTavern, AutoWeave API).
+
+    Leçons Apprises (💡 Lessons Learned) : Partagez les observations sur l'efficacité de la démarche ou les découvertes.

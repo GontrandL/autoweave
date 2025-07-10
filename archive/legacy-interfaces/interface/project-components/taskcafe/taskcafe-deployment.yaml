@@ -1,0 +1,279 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taskcafe
+  labels:
+    name: taskcafe
+    app.kubernetes.io/name: taskcafe
+    app.kubernetes.io/instance: autoweave-taskcafe
+    app.kubernetes.io/component: project-management
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskcafe-config
+  namespace: taskcafe
+data:
+  database.conf: |
+    TASKCAFE_DATABASE_HOST=postgres-service
+    TASKCAFE_DATABASE_NAME=taskcafe
+    TASKCAFE_DATABASE_USER=taskcafe
+    TASKCAFE_DATABASE_PASSWORD=taskcafe_password
+    TASKCAFE_DATABASE_SSLMODE=disable
+    TASKCAFE_DATABASE_PORT=5432
+  app.conf: |
+    TASKCAFE_SECRET_KEY=autoweave-taskcafe-secret-key
+    TASKCAFE_MIGRATE=true
+    TASKCAFE_AUTOWEAVE_API_URL=http://autoweave-api:3002
+    TASKCAFE_AUTOWEAVE_API_KEY=autoweave-api-key
+    TASKCAFE_PORT=3333
+    TASKCAFE_HOST=0.0.0.0
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: taskcafe-secrets
+  namespace: taskcafe
+type: Opaque
+data:
+  database-password: dGFza2NhZmVfcGFzc3dvcmQ=  # base64 encoded "taskcafe_password"
+  secret-key: YXV0b3dlYXZlLXRhc2tjYWZlLXNlY3JldC1rZXk=  # base64 encoded secret key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: taskcafe
+  labels:
+    app: postgres
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        component: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: taskcafe
+        - name: POSTGRES_USER
+          value: taskcafe
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: taskcafe-secrets
+              key: database-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - taskcafe
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - taskcafe
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: taskcafe
+  labels:
+    app: postgres
+    component: database
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: taskcafe
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskcafe
+  namespace: taskcafe
+  labels:
+    app: taskcafe
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taskcafe
+  template:
+    metadata:
+      labels:
+        app: taskcafe
+        component: frontend
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15
+        command: 
+          - sh
+          - -c
+          - |
+            until pg_isready -h postgres-service -U taskcafe; do
+              echo "Waiting for postgres..."
+              sleep 2
+            done
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: taskcafe-secrets
+              key: database-password
+      containers:
+      - name: taskcafe
+        image: taskcafe/taskcafe:latest
+        ports:
+        - containerPort: 3333
+        env:
+        - name: TASKCAFE_DATABASE_HOST
+          value: postgres-service
+        - name: TASKCAFE_DATABASE_NAME
+          value: taskcafe
+        - name: TASKCAFE_DATABASE_USER
+          value: taskcafe
+        - name: TASKCAFE_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: taskcafe-secrets
+              key: database-password
+        - name: TASKCAFE_DATABASE_SSLMODE
+          value: disable
+        - name: TASKCAFE_DATABASE_PORT
+          value: "5432"
+        - name: TASKCAFE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: taskcafe-secrets
+              key: secret-key
+        - name: TASKCAFE_MIGRATE
+          value: "true"
+        - name: TASKCAFE_AUTOWEAVE_API_URL
+          value: "http://autoweave-api:3002"
+        - name: TASKCAFE_AUTOWEAVE_API_KEY
+          value: "autoweave-api-key"
+        volumeMounts:
+        - name: taskcafe-config
+          mountPath: /app/conf
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3333
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 3333
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: taskcafe-config
+        configMap:
+          name: taskcafe-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskcafe-service
+  namespace: taskcafe
+  labels:
+    app: taskcafe
+    component: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3333
+    targetPort: 3333
+    protocol: TCP
+  selector:
+    app: taskcafe
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskcafe-ingress
+  namespace: taskcafe
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization"
+spec:
+  rules:
+  - host: taskcafe.autoweave.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: taskcafe-service
+            port:
+              number: 3333
+  - host: localhost
+    http:
+      paths:
+      - path: /taskcafe
+        pathType: Prefix
+        backend:
+          service:
+            name: taskcafe-service
+            port:
+              number: 3333

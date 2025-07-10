@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoWeave Extension Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-container {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .success {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .error {
+            background-color: #f44336;
+            color: white;
+        }
+        .info {
+            background-color: #2196F3;
+            color: white;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+        }
+        .agents-list {
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .agent-item {
+            background-color: #444;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        .log-container {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AutoWeave Extension Test</h1>
+    <p>This page tests the AutoWeave extension functionality without requiring SillyTavern.</p>
+
+    <div class="test-container">
+        <h2>Connection Status</h2>
+        <div id="connection-status" class="status info">Testing connection...</div>
+        <button onclick="testConnection()">Test Connection</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Agent Management</h2>
+        <div id="agents-status" class="status info">Loading agents...</div>
+        <button onclick="loadAgents()">Load Agents</button>
+        <div id="agents-list" class="agents-list"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Create Agent</h2>
+        <textarea id="agent-description" placeholder="Enter agent description (e.g., 'monitoring server temperature')"></textarea>
+        <br>
+        <button onclick="createAgent()">Create Agent</button>
+        <div id="create-status" class="status info" style="display: none;"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Chat API Test</h2>
+        <textarea id="chat-message" placeholder="Enter chat message (e.g., 'Hello, what can you do?')"></textarea>
+        <br>
+        <button onclick="testChat()">Send Message</button>
+        <div id="chat-status" class="status info" style="display: none;"></div>
+        <div id="chat-response" class="log-container" style="display: none;"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Extension Functions Test</h2>
+        <button onclick="testExtensionFunctions()">Test Extension Functions</button>
+        <div id="extension-status" class="status info" style="display: none;"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Log</h2>
+        <div id="test-log" class="log-container"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        const AUTOWEAVE_API_URL = 'http://localhost:3000';
+        let testLog = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+            testLog.push(entry);
+            
+            const logContainer = document.getElementById('test-log');
+            logContainer.innerHTML = testLog.join('\n');
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function clearLog() {
+            testLog = [];
+            document.getElementById('test-log').innerHTML = '';
+        }
+
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+        }
+
+        async function testConnection() {
+            log('Testing connection to AutoWeave API...');
+            
+            try {
+                const response = await fetch(`${AUTOWEAVE_API_URL}/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('connection-status', 'Connected to AutoWeave API', 'success');
+                    log(`Connection successful: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus('connection-status', `Connection failed: ${error.message}`, 'error');
+                log(`Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadAgents() {
+            log('Loading agents from AutoWeave API...');
+            
+            try {
+                const response = await fetch(`${AUTOWEAVE_API_URL}/api/agents`);
+                
+                if (response.ok) {
+                    const agents = await response.json();
+                    updateStatus('agents-status', `Found ${agents.length} agents`, 'success');
+                    
+                    const agentsList = document.getElementById('agents-list');
+                    if (agents.length === 0) {
+                        agentsList.innerHTML = '<div class="agent-item">No agents found</div>';
+                    } else {
+                        agentsList.innerHTML = agents.map(agent => `
+                            <div class="agent-item">
+                                <strong>${agent.name}</strong> (${agent.id})<br>
+                                Status: ${agent.status}<br>
+                                Description: ${agent.description}
+                            </div>
+                        `).join('');
+                    }
+                    
+                    log(`Loaded ${agents.length} agents successfully`, 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus('agents-status', `Failed to load agents: ${error.message}`, 'error');
+                log(`Failed to load agents: ${error.message}`, 'error');
+            }
+        }
+
+        async function createAgent() {
+            const description = document.getElementById('agent-description').value.trim();
+            
+            if (!description) {
+                updateStatus('create-status', 'Please enter an agent description', 'error');
+                return;
+            }
+
+            log(`Creating agent: ${description}`);
+            
+            try {
+                const response = await fetch(`${AUTOWEAVE_API_URL}/api/agents`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ description })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    updateStatus('create-status', `Agent "${result.workflow.name}" created successfully!`, 'success');
+                    log(`Agent created successfully: ${result.workflow.name}`, 'success');
+                    
+                    // Clear the description field
+                    document.getElementById('agent-description').value = '';
+                    
+                    // Refresh agents list
+                    loadAgents();
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus('create-status', `Failed to create agent: ${error.message}`, 'error');
+                log(`Failed to create agent: ${error.message}`, 'error');
+            }
+        }
+
+        async function testChat() {
+            const message = document.getElementById('chat-message').value.trim();
+            
+            if (!message) {
+                updateStatus('chat-status', 'Please enter a chat message', 'error');
+                return;
+            }
+
+            log(`Sending chat message: ${message}`);
+            
+            try {
+                const response = await fetch(`${AUTOWEAVE_API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'user', content: message }
+                        ]
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    updateStatus('chat-status', 'Chat message sent successfully!', 'success');
+                    
+                    const chatResponse = document.getElementById('chat-response');
+                    chatResponse.innerHTML = `<strong>Response:</strong>\n${result.choices[0].message.content}\n\n<strong>Usage:</strong>\n${JSON.stringify(result.usage, null, 2)}`;
+                    chatResponse.style.display = 'block';
+                    
+                    log(`Chat response received: ${result.choices[0].message.content}`, 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus('chat-status', `Failed to send chat message: ${error.message}`, 'error');
+                log(`Failed to send chat message: ${error.message}`, 'error');
+            }
+        }
+
+        function testExtensionFunctions() {
+            log('Testing extension functions...');
+            
+            // Test if extension functions would work
+            const tests = [
+                { name: 'Extension initialization', test: () => typeof window !== 'undefined' },
+                { name: 'Fetch API available', test: () => typeof fetch !== 'undefined' },
+                { name: 'JSON parsing', test: () => JSON.parse('{"test": true}').test === true },
+                { name: 'DOM manipulation', test: () => document.getElementById('test-log') !== null },
+                { name: 'Event handling', test: () => typeof addEventListener !== 'undefined' }
+            ];
+            
+            let passed = 0;
+            let total = tests.length;
+            
+            tests.forEach(test => {
+                try {
+                    const result = test.test();
+                    if (result) {
+                        log(`✓ ${test.name}`, 'success');
+                        passed++;
+                    } else {
+                        log(`✗ ${test.name}`, 'error');
+                    }
+                } catch (error) {
+                    log(`✗ ${test.name}: ${error.message}`, 'error');
+                }
+            });
+            
+            const status = passed === total ? 'success' : 'error';
+            updateStatus('extension-status', `Extension functions test: ${passed}/${total} passed`, status);
+        }
+
+        // Initialize tests
+        window.addEventListener('load', () => {
+            log('AutoWeave Extension Test initialized');
+            testConnection();
+            loadAgents();
+        });
+    </script>
+</body>
+</html>

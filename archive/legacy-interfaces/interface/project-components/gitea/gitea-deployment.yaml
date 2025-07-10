@@ -1,0 +1,1001 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gitea
+  labels:
+    name: gitea
+    app.kubernetes.io/name: gitea
+    app.kubernetes.io/instance: autoweave-gitea
+    app.kubernetes.io/component: git-repository
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitea-config
+  namespace: gitea
+data:
+  app.ini: |
+    [server]
+    APP_DATA_PATH = /data
+    DOMAIN = localhost
+    SSH_DOMAIN = localhost
+    HTTP_PORT = 3001
+    ROOT_URL = http://localhost:3001/
+    DISABLE_SSH = false
+    SSH_PORT = 22
+    SSH_LISTEN_PORT = 22
+    LFS_START_SERVER = true
+    LFS_CONTENT_PATH = /data/lfs
+    LFS_JWT_SECRET = gitea-lfs-jwt-secret
+    OFFLINE_MODE = false
+    
+    [database]
+    DB_TYPE = postgres
+    HOST = postgres-gitea:5432
+    NAME = gitea
+    USER = gitea
+    PASSWD = gitea_password
+    SCHEMA = 
+    SSL_MODE = disable
+    CHARSET = utf8
+    
+    [indexer]
+    ISSUE_INDEXER_PATH = /data/indexers/issues.bleve
+    ISSUE_INDEXER_TYPE = bleve
+    REPO_INDEXER_ENABLED = true
+    REPO_INDEXER_PATH = /data/indexers/repos.bleve
+    UPDATE_BUFFER_LEN = 20
+    MAX_FILE_SIZE = 1048576
+    
+    [session]
+    PROVIDER = file
+    PROVIDER_CONFIG = /data/sessions
+    COOKIE_SECURE = false
+    COOKIE_NAME = i_like_gitea
+    
+    [picture]
+    AVATAR_UPLOAD_PATH = /data/avatars
+    REPOSITORY_AVATAR_UPLOAD_PATH = /data/repo-avatars
+    DISABLE_GRAVATAR = false
+    ENABLE_FEDERATED_AVATAR = true
+    
+    [attachment]
+    ENABLED = true
+    PATH = /data/attachments
+    MAX_SIZE = 4
+    MAX_FILES = 5
+    
+    [log]
+    MODE = console
+    LEVEL = info
+    ROOT_PATH = /data/log
+    
+    [security]
+    INSTALL_LOCK = true
+    SECRET_KEY = gitea-secret-key
+    REVERSE_PROXY_LIMIT = 1
+    REVERSE_PROXY_TRUSTED_PROXIES = *
+    
+    [service]
+    REGISTER_EMAIL_CONFIRM = false
+    ENABLE_NOTIFY_MAIL = false
+    DISABLE_REGISTRATION = false
+    ALLOW_ONLY_EXTERNAL_REGISTRATION = false
+    ENABLE_CAPTCHA = false
+    REQUIRE_SIGNIN_VIEW = false
+    DEFAULT_KEEP_EMAIL_PRIVATE = false
+    DEFAULT_ALLOW_CREATE_ORGANIZATION = true
+    DEFAULT_ENABLE_TIMETRACKING = true
+    NO_REPLY_ADDRESS = noreply.localhost
+    
+    [mailer]
+    ENABLED = false
+    
+    [openid]
+    ENABLE_OPENID_SIGNIN = true
+    ENABLE_OPENID_SIGNUP = true
+    
+    [oauth2]
+    ENABLE = true
+    JWT_SECRET = gitea-oauth2-jwt-secret
+    
+    [webhook]
+    ALLOWED_HOST_LIST = *
+    SKIP_TLS_VERIFY = true
+    
+    [actions]
+    ENABLED = true
+    DEFAULT_ACTIONS_URL = https://gitea.com
+    
+    [packages]
+    ENABLED = true
+    
+    [federation]
+    ENABLED = false
+    
+    [ui]
+    EXPLORE_PAGING_NUM = 20
+    ISSUE_PAGING_NUM = 10
+    MEMBERS_PAGING_NUM = 20
+    FEED_MAX_COMMIT_NUM = 5
+    GRAPH_MAX_COMMIT_NUM = 100
+    CODE_COMMENT_LINES = 4
+    DEFAULT_THEME = auto
+    SHOW_USER_EMAIL = true
+    THEMES = auto,gitea,arc-green
+    
+    [ui.meta]
+    AUTHOR = Gitea - AutoWeave Integration
+    DESCRIPTION = Git repository management for AutoWeave
+    KEYWORDS = git,autoweave,repository,code
+    
+    [repository]
+    ROOT = /data/git/repositories
+    SCRIPT_TYPE = bash
+    DETECTED_CHARSETS_ORDER = UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, ISO-8859, windows-1252, ISO-8859, windows-1250, ISO-8859-5, KOI8-R, UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, ISO-8859, windows-1252, ISO-8859, windows-1250, ISO-8859-5, KOI8-R, UTF-8, UTF-16BE, UTF-16LE, UTF-32BE, UTF-32LE, ISO-8859, windows-1252, ISO-8859, windows-1250, ISO-8859-5, KOI8-R
+    ANSI_CHARSET = 
+    FORCE_PRIVATE = false
+    DEFAULT_PRIVATE = last
+    DEFAULT_PUSH_CREATE_PRIVATE = true
+    MAX_CREATION_LIMIT = -1
+    MIRROR_QUEUE_LENGTH = 1000
+    PULL_REQUEST_QUEUE_LENGTH = 1000
+    PREFERRED_LICENSES = Apache License 2.0,MIT License
+    DISABLE_HTTP_GIT = false
+    ACCESS_CONTROL_ALLOW_ORIGIN = 
+    USE_COMPAT_SSH_URI = false
+    DEFAULT_CLOSE_ISSUES_VIA_COMMITS_IN_ANY_BRANCH = false
+    ENABLE_PUSH_CREATE_USER = false
+    ENABLE_PUSH_CREATE_ORG = false
+    DISABLED_REPO_UNITS = 
+    DEFAULT_REPO_UNITS = repo.code,repo.releases,repo.issues,repo.pulls,repo.wiki,repo.projects,repo.packages,repo.actions
+    PREFIX_ARCHIVE_FILES = true
+    DISABLE_MIGRATIONS = false
+    DISABLE_STARS = false
+    DEFAULT_BRANCH = main
+    ALLOW_ADOPTION_OF_UNADOPTED_REPOSITORIES = false
+    ALLOW_DELETION_OF_UNADOPTED_REPOSITORIES = false
+    DISABLE_DOWNLOAD_SOURCE_ARCHIVES = false
+    
+    [repository.editor]
+    LINE_WRAP_EXTENSIONS = .txt,.md,.markdown,.mdown,.mkd,.rst
+    
+    [repository.local]
+    LOCAL_COPY_PATH = /data/tmp/local-repo
+    
+    [repository.upload]
+    ENABLED = true
+    TEMP_PATH = /data/tmp/uploads
+    ALLOWED_TYPES = 
+    FILE_MAX_SIZE = 3
+    MAX_FILES = 5
+    
+    [repository.pull-request]
+    WORK_IN_PROGRESS_PREFIXES = WIP:,[WIP]
+    CLOSE_KEYWORDS = close,closes,closed,fix,fixes,fixed,resolve,resolves,resolved
+    REOPEN_KEYWORDS = reopen,reopens,reopened
+    DEFAULT_MERGE_STYLE = merge
+    DEFAULT_MERGE_MESSAGE_COMMITS_LIMIT = 50
+    DEFAULT_MERGE_MESSAGE_SIZE = 5120
+    DEFAULT_MERGE_MESSAGE_ALL_AUTHORS = false
+    DEFAULT_MERGE_MESSAGE_MAX_APPROVERS = 10
+    DEFAULT_MERGE_MESSAGE_OFFICIAL_APPROVERS_ONLY = true
+    POPULATE_SQUASH_COMMENT_WITH_COMMIT_MESSAGES = false
+    ADD_CO_COMMITTER_TRAILERS = true
+    TEST_CONFLICTING_PATCHES_WITH_GIT_APPLY = false
+    
+    [repository.issue]
+    LOCK_REASONS = Too heated,Off-topic,Resolved,Spam
+    MAX_PINNED = 3
+    
+    [repository.release]
+    ALLOWED_TYPES = 
+    DEFAULT_PAGING_NUM = 10
+    
+    [repository.signing]
+    SIGNING_KEY = default
+    SIGNING_NAME = 
+    SIGNING_EMAIL = 
+    INITIAL_COMMIT = always
+    CRUD_ACTIONS = pubkey, twofa, parentsigned
+    WIKI = never
+    MERGES = pubkey, twofa, basesigned, commitssigned
+    
+    [cors]
+    ENABLED = true
+    SCHEME = http
+    ALLOW_DOMAIN = *
+    ALLOW_SUBDOMAIN = false
+    METHODS = GET,HEAD,POST,PUT,DELETE,OPTIONS
+    MAX_AGE = 10m
+    ALLOW_CREDENTIALS = false
+    
+    [i18n]
+    LANGS = en-US,zh-CN,zh-HK,zh-TW,de-DE,fr-FR,nl-NL,lv-LV,ru-RU,uk-UA,ja-JP,es-ES,pt-BR,pt-PT,pl-PL,bg-BG,it-IT,fi-FI,tr-TR,cs-CZ,sr-SP,sv-SE,ko-KR,el-GR,fa-IR,hu-HU,id-ID,ml-IN
+    NAMES = English,简体中文,繁體中文（香港）,繁體中文（台灣）,Deutsch,français,Nederlands,latviešu,русский,Українська,日本語,español,português do Brasil,Português,polski,български,italiano,suomi,Türkçe,čeština,српски,svenska,한국어,ελληνικά,فارسی,magyar nyelv,bahasa Indonesia,മലയാളം
+    
+    [markup]
+    ENABLED = true
+    
+    [markup.asciidoc]
+    ENABLED = false
+    FILE_EXTENSIONS = .adoc,.asciidoc
+    RENDER_COMMAND = asciidoc --out-file=- -
+    IS_INPUT_FILE = false
+    
+    [markup.jupyter]
+    ENABLED = true
+    FILE_EXTENSIONS = .ipynb
+    RENDER_COMMAND = jupyter nbconvert --stdin --stdout --to html --template basic
+    IS_INPUT_FILE = false
+    
+    [markup.markdown]
+    ENABLED = true
+    FILE_EXTENSIONS = .md,.markdown,.mdown,.mkd,.rst
+    RENDER_COMMAND = 
+    IS_INPUT_FILE = false
+    
+    [markup.mermaid]
+    ENABLED = true
+    FILE_EXTENSIONS = .mmd
+    RENDER_COMMAND = mmdc -i - -o -
+    IS_INPUT_FILE = false
+    
+    [markup.orgmode]
+    ENABLED = false
+    FILE_EXTENSIONS = .org
+    RENDER_COMMAND = emacs -l init.el --batch -f org-html-export-to-html --kill
+    IS_INPUT_FILE = true
+    
+    [markup.restructuredtext]
+    ENABLED = false
+    FILE_EXTENSIONS = .rst
+    RENDER_COMMAND = rst2html.py
+    IS_INPUT_FILE = false
+    
+    [markup.sanitizer]
+    ELEMENT = span
+    ALLOW_ATTR = class
+    REGEXP = ^(info|warning|error)$
+    
+    [time]
+    DEFAULT_UI_LOCATION = 
+    
+    [task]
+    QUEUE_TYPE = channel
+    QUEUE_LENGTH = 1000
+    QUEUE_CONN_STR = 
+    
+    [migrations]
+    MAX_ATTEMPTS = 3
+    RETRY_BACKOFF = 3
+    ALLOWED_DOMAINS = 
+    BLOCKED_DOMAINS = 
+    ALLOW_LOCALNETWORKS = false
+    SKIP_TLS_VERIFY = false
+    
+    [mirror]
+    DEFAULT_INTERVAL = 8h
+    MIN_INTERVAL = 10m
+    
+    [api]
+    ENABLE_SWAGGER = true
+    MAX_RESPONSE_ITEMS = 50
+    DEFAULT_PAGING_NUM = 30
+    DEFAULT_GIT_TREES_PER_PAGE = 1000
+    DEFAULT_MAX_BLOB_SIZE = 10485760
+    
+    [git]
+    PATH = 
+    DISABLE_DIFF_HIGHLIGHT = false
+    MAX_GIT_DIFF_LINES = 1000
+    MAX_GIT_DIFF_LINE_CHARACTERS = 5000
+    MAX_GIT_DIFF_FILES = 100
+    GC_ARGS = 
+    
+    [git.timeout]
+    DEFAULT = 360
+    MIGRATE = 600
+    MIRROR = 300
+    CLONE = 300
+    PULL = 300
+    GC = 60
+    
+    [git.config]
+    diff.algorithm = histogram
+    
+    [mirror]
+    DISABLE_NEW_PULL = false
+    DISABLE_NEW_PUSH = false
+    DEFAULT_INTERVAL = 8h
+    MIN_INTERVAL = 10m
+    
+    [lfs]
+    START_SERVER = true
+    CONTENT_PATH = /data/lfs
+    JWT_SECRET = gitea-lfs-jwt-secret
+    HTTP_AUTH_EXPIRY = 20m
+    MAX_FILE_SIZE = 0
+    MAX_BATCH_SIZE = 0
+    
+    [storage]
+    SERVE_DIRECT = false
+    
+    [storage.local]
+    PATH = /data/storage
+    
+    [proxy]
+    PROXY_ENABLED = false
+    PROXY_URL = 
+    PROXY_HOSTS = 
+    
+    [ssh.minimum_key_sizes]
+    ED25519 = 256
+    ECDSA = 256
+    RSA = 2048
+    DSA = 1024
+    
+    [cron]
+    ENABLED = true
+    RUN_AT_START = false
+    
+    [cron.update_mirrors]
+    SCHEDULE = @every 10m
+    
+    [cron.repo_health_check]
+    SCHEDULE = @midnight
+    TIMEOUT = 60s
+    ARGS = 
+    
+    [cron.check_repo_stats]
+    RUN_AT_START = true
+    SCHEDULE = @midnight
+    
+    [cron.archive_cleanup]
+    ENABLED = true
+    RUN_AT_START = true
+    SCHEDULE = @midnight
+    OLDER_THAN = 24h
+    
+    [cron.sync_external_users]
+    RUN_AT_START = false
+    SCHEDULE = @midnight
+    UPDATE_EXISTING = true
+    
+    [cron.cleanup_hook_task_table]
+    ENABLED = true
+    RUN_AT_START = false
+    SCHEDULE = @midnight
+    CLEANUP_TYPE = OlderThan
+    OLDER_THAN = 168h
+    NUMBER_TO_KEEP = 10
+    
+    [cron.cleanup_packages]
+    ENABLED = true
+    RUN_AT_START = true
+    SCHEDULE = @midnight
+    OLDER_THAN = 24h
+    
+    [cron.cleanup_actions]
+    ENABLED = true
+    RUN_AT_START = true
+    SCHEDULE = @midnight
+    OLDER_THAN = 24h
+    
+    [git.reflog]
+    ENABLED = true
+    EXPIRATION = 90
+    
+    [admin]
+    DISABLE_REGULAR_ORG_CREATION = false
+    DEFAULT_EMAIL_NOTIFICATIONS = enabled
+    
+    [cache]
+    ENABLED = true
+    ADAPTER = memory
+    INTERVAL = 60
+    HOST = 
+    ITEM_TTL = 16h
+    
+    [cache.last_commit]
+    ENABLED = true
+    ITEM_TTL = 8760h
+    COMMITS_COUNT = 1000
+    
+    [queue]
+    TYPE = channel
+    DATADIR = /data/queues
+    LENGTH = 20
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea
+    SET_NAME = _gitea_set
+    
+    [queue.issue_indexer]
+    TYPE = channel
+    DATADIR = /data/indexers/issues.queue
+    LENGTH = 20
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_indexer
+    SET_NAME = _gitea_indexer_set
+    
+    [queue.pr_patch_checker]
+    TYPE = channel
+    DATADIR = /data/queues/pr_patch_checker
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_pr_patch_checker
+    SET_NAME = _gitea_pr_patch_checker_set
+    
+    [queue.mail]
+    TYPE = channel
+    DATADIR = /data/queues/mail
+    LENGTH = 100
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_mail
+    SET_NAME = _gitea_mail_set
+    
+    [queue.notification]
+    TYPE = channel
+    DATADIR = /data/queues/notification
+    LENGTH = 100
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_notification
+    SET_NAME = _gitea_notification_set
+    
+    [queue.webhook]
+    TYPE = channel
+    DATADIR = /data/queues/webhook
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_webhook
+    SET_NAME = _gitea_webhook_set
+    
+    [queue.task]
+    TYPE = channel
+    DATADIR = /data/queues/task
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_task
+    SET_NAME = _gitea_task_set
+    
+    [queue.mirror]
+    TYPE = channel
+    DATADIR = /data/queues/mirror
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_mirror
+    SET_NAME = _gitea_mirror_set
+    
+    [queue.push_update]
+    TYPE = channel
+    DATADIR = /data/queues/push_update
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_push_update
+    SET_NAME = _gitea_push_update_set
+    
+    [queue.repo_archive]
+    TYPE = channel
+    DATADIR = /data/queues/repo_archive
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_repo_archive
+    SET_NAME = _gitea_repo_archive_set
+    
+    [queue.notification_service]
+    TYPE = channel
+    DATADIR = /data/queues/notification_service
+    LENGTH = 100
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_notification_service
+    SET_NAME = _gitea_notification_service_set
+    
+    [queue.code_indexer]
+    TYPE = channel
+    DATADIR = /data/indexers/code.queue
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_code_indexer
+    SET_NAME = _gitea_code_indexer_set
+    
+    [queue.migrations]
+    TYPE = channel
+    DATADIR = /data/queues/migrations
+    LENGTH = 100
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_migrations
+    SET_NAME = _gitea_migrations_set
+    
+    [queue.mails]
+    TYPE = channel
+    DATADIR = /data/queues/mails
+    LENGTH = 100
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_mails
+    SET_NAME = _gitea_mails_set
+    
+    [queue.repo_stats]
+    TYPE = channel
+    DATADIR = /data/queues/repo_stats
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_repo_stats
+    SET_NAME = _gitea_repo_stats_set
+    
+    [queue.push_hooks]
+    TYPE = channel
+    DATADIR = /data/queues/push_hooks
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_push_hooks
+    SET_NAME = _gitea_push_hooks_set
+    
+    [queue.repo_archive_cleanup]
+    TYPE = channel
+    DATADIR = /data/queues/repo_archive_cleanup
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_repo_archive_cleanup
+    SET_NAME = _gitea_repo_archive_cleanup_set
+    
+    [queue.action_runner_jobs]
+    TYPE = channel
+    DATADIR = /data/queues/action_runner_jobs
+    LENGTH = 1000
+    BATCH_LENGTH = 20
+    CONN_STR = 
+    QUEUE_NAME = _gitea_action_runner_jobs
+    SET_NAME = _gitea_action_runner_jobs_set
+    
+    [highlight]
+    HIGHLIGHT_MAPPING = 
+    
+    [other]
+    SHOW_FOOTER_BRANDING = false
+    SHOW_FOOTER_VERSION = true
+    SHOW_FOOTER_TEMPLATE_LOAD_TIME = true
+    ENABLE_SITEMAP = true
+    ENABLE_FEED = true
+    
+    [markup.highlight]
+    HIGHLIGHT_MAPPING = 
+    
+    [project]
+    PROJECT_BOARD_BASIC_KANBAN_TYPE = To Do, In Progress, Done
+    PROJECT_BOARD_BUG_TRIAGE_TYPE = Needs Triage, High Priority, Low Priority, Closed
+    
+    [actions]
+    ENABLED = true
+    DEFAULT_ACTIONS_URL = https://gitea.com
+    
+    [packages]
+    ENABLED = true
+    CHUNKED_UPLOAD_PATH = /data/tmp/package-upload
+    
+    [federation]
+    ENABLED = false
+    SHARE_USER_STATISTICS = true
+    
+    [DEFAULT]
+    APP_NAME = Gitea - AutoWeave Integration
+    RUN_USER = git
+    RUN_MODE = prod
+    WORK_PATH = /data
+    
+    [log.console]
+    LEVEL = 
+    STDERR = false
+    
+    [log.file]
+    LEVEL = 
+    
+    [log.conn]
+    LEVEL = 
+    
+    [log.smtp]
+    LEVEL = 
+    
+    [log.xorm]
+    LEVEL = 
+    
+    [extensions]
+    ENABLED = true
+    
+    [metrics]
+    ENABLED = false
+    TOKEN = 
+    
+    [oauth2_client]
+    REGISTER_EMAIL_CONFIRM = false
+    OPENID_CONNECT_SCOPES = 
+    ENABLE_AUTO_REGISTRATION = false
+    USERNAME = userid
+    EMAIL_ATTRIBUTE = email
+    ACCOUNT_LINKING = login
+    
+    [webhook]
+    QUEUE_LENGTH = 1000
+    DELIVER_TIMEOUT = 5
+    SKIP_TLS_VERIFY = false
+    ALLOWED_HOST_LIST = autoweave-api:3002,localhost:3002
+    PAGING_NUM = 10
+    PROXY_URL = 
+    PROXY_HOSTS = 
+    
+    [default]
+    APP_NAME = Gitea - AutoWeave Integration
+    RUN_USER = git
+    RUN_MODE = prod
+    WORK_PATH = /data
+  webhook.conf: |
+    # AutoWeave Webhook Configuration
+    AUTOWEAVE_WEBHOOK_URL=http://autoweave-api:3002/api/git/webhook
+    AUTOWEAVE_WEBHOOK_SECRET=autoweave-git-webhook-secret
+    AUTOWEAVE_API_URL=http://autoweave-api:3002
+    AUTOWEAVE_API_KEY=autoweave-api-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitea-secrets
+  namespace: gitea
+type: Opaque
+data:
+  database-password: Z2l0ZWFfcGFzc3dvcmQ=  # base64 encoded "gitea_password"
+  secret-key: Z2l0ZWEtc2VjcmV0LWtleQ==  # base64 encoded "gitea-secret-key"
+  lfs-jwt-secret: Z2l0ZWEtbGZzLWp3dC1zZWNyZXQ=  # base64 encoded "gitea-lfs-jwt-secret"
+  oauth2-jwt-secret: Z2l0ZWEtb2F1dGgyLWp3dC1zZWNyZXQ=  # base64 encoded "gitea-oauth2-jwt-secret"
+  webhook-secret: YXV0b3dlYXZlLWdpdC13ZWJob29rLXNlY3JldA==  # base64 encoded "autoweave-git-webhook-secret"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-gitea
+  namespace: gitea
+  labels:
+    app: postgres-gitea
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-gitea
+  template:
+    metadata:
+      labels:
+        app: postgres-gitea
+        component: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: gitea
+        - name: POSTGRES_USER
+          value: gitea
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: database-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-gitea-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - gitea
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - gitea
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-gitea-storage
+        persistentVolumeClaim:
+          claimName: postgres-gitea-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-gitea
+  namespace: gitea
+  labels:
+    app: postgres-gitea
+    component: database
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres-gitea
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-gitea-pvc
+  namespace: gitea
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitea-data-pvc
+  namespace: gitea
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea
+  namespace: gitea
+  labels:
+    app: gitea
+    component: git-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitea
+  template:
+    metadata:
+      labels:
+        app: gitea
+        component: git-server
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15
+        command: 
+          - sh
+          - -c
+          - |
+            until pg_isready -h postgres-gitea -U gitea; do
+              echo "Waiting for postgres..."
+              sleep 2
+            done
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: database-password
+      - name: setup-gitea
+        image: gitea/gitea:latest
+        command: 
+          - sh
+          - -c
+          - |
+            # Create necessary directories
+            mkdir -p /data/git/{repositories,lfs}
+            mkdir -p /data/{attachments,sessions,log,indexers,queues,tmp,storage}
+            mkdir -p /data/indexers/{issues.bleve,repos.bleve}
+            
+            # Set proper permissions
+            chown -R 1000:1000 /data
+            chmod -R 750 /data
+            
+            # Copy configuration
+            cp /etc/gitea/app.ini /data/gitea/conf/app.ini
+            chown 1000:1000 /data/gitea/conf/app.ini
+            chmod 640 /data/gitea/conf/app.ini
+        volumeMounts:
+        - name: gitea-data
+          mountPath: /data
+        - name: gitea-config
+          mountPath: /etc/gitea
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+      containers:
+      - name: gitea
+        image: gitea/gitea:latest
+        ports:
+        - containerPort: 3001
+        - containerPort: 22
+        env:
+        - name: USER_UID
+          value: "1000"
+        - name: USER_GID
+          value: "1000"
+        - name: GITEA__database__DB_TYPE
+          value: postgres
+        - name: GITEA__database__HOST
+          value: postgres-gitea:5432
+        - name: GITEA__database__NAME
+          value: gitea
+        - name: GITEA__database__USER
+          value: gitea
+        - name: GITEA__database__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: database-password
+        - name: GITEA__security__SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gitea-secrets
+              key: secret-key
+        - name: GITEA__security__INSTALL_LOCK
+          value: "true"
+        - name: GITEA__server__DOMAIN
+          value: localhost
+        - name: GITEA__server__SSH_DOMAIN
+          value: localhost
+        - name: GITEA__server__HTTP_PORT
+          value: "3001"
+        - name: GITEA__server__ROOT_URL
+          value: "http://localhost:3001/"
+        - name: GITEA__server__SSH_PORT
+          value: "22"
+        - name: GITEA__server__SSH_LISTEN_PORT
+          value: "22"
+        - name: GITEA__webhook__ALLOWED_HOST_LIST
+          value: "autoweave-api:3002,localhost:3002"
+        - name: GITEA__webhook__SKIP_TLS_VERIFY
+          value: "true"
+        - name: GITEA__actions__ENABLED
+          value: "true"
+        - name: GITEA__packages__ENABLED
+          value: "true"
+        - name: GITEA__oauth2__ENABLE
+          value: "true"
+        - name: GITEA__cors__ENABLED
+          value: "true"
+        - name: GITEA__cors__ALLOW_DOMAIN
+          value: "*"
+        - name: GITEA__api__ENABLE_SWAGGER
+          value: "true"
+        volumeMounts:
+        - name: gitea-data
+          mountPath: /data
+        - name: gitea-config
+          mountPath: /etc/gitea
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3001
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/healthz
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          runAsNonRoot: true
+          readOnlyRootFilesystem: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: gitea-data
+        persistentVolumeClaim:
+          claimName: gitea-data-pvc
+      - name: gitea-config
+        configMap:
+          name: gitea-config
+          items:
+          - key: app.ini
+            path: app.ini
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea-service
+  namespace: gitea
+  labels:
+    app: gitea
+    component: git-server
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+    protocol: TCP
+  - name: ssh
+    port: 22
+    targetPort: 22
+    protocol: TCP
+  selector:
+    app: gitea
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gitea-ingress
+  namespace: gitea
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  rules:
+  - host: git.autoweave.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gitea-service
+            port:
+              number: 3001
+  - host: localhost
+    http:
+      paths:
+      - path: /git
+        pathType: Prefix
+        backend:
+          service:
+            name: gitea-service
+            port:
+              number: 3001

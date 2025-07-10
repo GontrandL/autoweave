@@ -1,0 +1,259 @@
+# AutoWeave Rasa Domain Configuration
+# This file defines the conversational AI capabilities for AutoWeave
+
+version: "3.1"
+
+# ==========================================================
+# INTENTS
+# ==========================================================
+
+intents:
+  # General conversation
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - mood_great
+  - mood_unhappy
+  - bot_challenge
+  
+  # AutoWeave specific intents
+  - create_agent
+  - list_agents
+  - delete_agent
+  - get_agent_status
+  - manage_agents
+  
+  # Workflow management
+  - create_workflow
+  - list_workflows
+  - execute_workflow
+  - workflow_status
+  
+  # Memory management
+  - search_memory
+  - add_memory
+  - memory_stats
+  
+  # Task management
+  - create_task
+  - list_tasks
+  - update_task
+  - delete_task
+  
+  # File management
+  - upload_file
+  - list_files
+  - search_files
+  - analyze_file
+  
+  # System management
+  - system_status
+  - system_metrics
+  - help_autoweave
+
+# ==========================================================
+# ENTITIES
+# ==========================================================
+
+entities:
+  - agent_name
+  - agent_description
+  - agent_id
+  - workflow_name
+  - workflow_id
+  - task_name
+  - task_id
+  - file_name
+  - file_type
+  - memory_query
+  - time_range
+
+# ==========================================================
+# SLOTS
+# ==========================================================
+
+slots:
+  agent_name:
+    type: text
+    influence_conversation: false
+    mappings:
+    - type: from_entity
+      entity: agent_name
+      
+  agent_description:
+    type: text
+    influence_conversation: false
+    mappings:
+    - type: from_entity
+      entity: agent_description
+      
+  agent_id:
+    type: text
+    influence_conversation: false
+    mappings:
+    - type: from_entity
+      entity: agent_id
+      
+  workflow_name:
+    type: text
+    influence_conversation: false
+    mappings:
+    - type: from_entity
+      entity: workflow_name
+      
+  current_context:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: custom
+    
+  user_preference:
+    type: text
+    influence_conversation: false
+    mappings:
+    - type: custom
+
+# ==========================================================
+# RESPONSES
+# ==========================================================
+
+responses:
+  utter_greet:
+  - text: "Hello! I'm AutoWeave, your AI agent orchestration assistant. How can I help you today?"
+  - text: "Hi there! I'm here to help you manage your AI agents and workflows. What would you like to do?"
+  
+  utter_goodbye:
+  - text: "Goodbye! Feel free to come back anytime you need help with AutoWeave."
+  - text: "See you later! Your agents and workflows will be here when you return."
+  
+  utter_iamabot:
+  - text: "I am AutoWeave, an AI assistant specialized in agent orchestration and workflow management."
+  
+  utter_help_autoweave:
+  - text: |
+      Here's what I can help you with:
+      
+      🤖 **Agent Management**:
+      - "Create an agent that processes files"
+      - "List all my agents"
+      - "Delete agent [name]"
+      - "What's the status of my agents?"
+      
+      🔄 **Workflow Management**:
+      - "Create a workflow for data processing"
+      - "Show my workflows"
+      - "Execute workflow [name]"
+      
+      🧠 **Memory & Files**:
+      - "Search my memory for [query]"
+      - "Upload and analyze this file"
+      - "What files do I have?"
+      
+      📊 **System Status**:
+      - "Show system status"
+      - "Get system metrics"
+      
+      Just ask me naturally - I understand context!
+  
+  utter_create_agent_confirm:
+  - text: "I'll create an agent for you. What should this agent do?"
+  - text: "Great! Please describe what you want the agent to do."
+  
+  utter_agent_created:
+  - text: "✅ Agent '{agent_name}' has been created successfully!"
+  - text: "🎉 Your new agent '{agent_name}' is ready to use!"
+  
+  utter_agents_listed:
+  - text: "Here are your current agents:"
+  - text: "📋 Your agent list:"
+  
+  utter_no_agents:
+  - text: "You don't have any agents yet. Would you like me to create one?"
+  - text: "No agents found. Let's create your first agent!"
+  
+  utter_agent_deleted:
+  - text: "Agent '{agent_name}' has been deleted."
+  - text: "✅ Agent '{agent_name}' removed successfully."
+  
+  utter_workflow_created:
+  - text: "🔄 Workflow '{workflow_name}' has been created!"
+  - text: "✅ New workflow '{workflow_name}' is ready to use!"
+  
+  utter_memory_search_results:
+  - text: "🔍 Here's what I found in your memory:"
+  - text: "📝 Memory search results:"
+  
+  utter_system_status:
+  - text: "📊 System Status:"
+  - text: "🖥️ Here's your system overview:"
+  
+  utter_ask_rephrase:
+  - text: "I'm not sure I understand. Could you rephrase that?"
+  - text: "Could you please clarify what you'd like me to do?"
+  
+  utter_error:
+  - text: "I encountered an error. Please try again or contact support."
+  - text: "Something went wrong. Let me try that again."
+  
+  utter_not_implemented:
+  - text: "This feature is not yet implemented, but it's on our roadmap!"
+  - text: "That's a great idea! This feature is coming soon."
+
+# ==========================================================
+# ACTIONS
+# ==========================================================
+
+actions:
+  # Custom actions for AutoWeave integration
+  - action_create_agent
+  - action_list_agents
+  - action_delete_agent
+  - action_get_agent_status
+  
+  - action_create_workflow
+  - action_list_workflows
+  - action_execute_workflow
+  
+  - action_search_memory
+  - action_add_memory
+  - action_memory_stats
+  
+  - action_create_task
+  - action_list_tasks
+  - action_update_task
+  
+  - action_upload_file
+  - action_analyze_file
+  
+  - action_system_status
+  - action_system_metrics
+  
+  - action_default_fallback
+
+# ==========================================================
+# FORMS
+# ==========================================================
+
+forms:
+  agent_creation_form:
+    required_slots:
+      - agent_description
+      
+  workflow_creation_form:
+    required_slots:
+      - workflow_name
+      - agent_id
+      
+  task_creation_form:
+    required_slots:
+      - task_name
+      - agent_id
+
+# ==========================================================
+# SESSION CONFIG
+# ==========================================================
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

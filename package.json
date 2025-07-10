@@ -1,0 +1,81 @@
+{
+  "name": "autoweave",
+  "version": "1.0.0",
+  "description": "The Self-Weaving Agent Orchestrator with AI Intelligence - Production Ready",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js --watch src --ext js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:integration": "jest tests/integration --runInBand",
+    "test:e2e": "jest tests/e2e --runInBand --detectOpenHandles",
+    "test:coverage": "jest --coverage",
+    "setup": "bash scripts/setup/setup-kagent.sh",
+    "setup-kagent": "bash scripts/setup/setup-kagent.sh",
+    "setup-appsmith": "bash scripts/setup/setup-appsmith.sh",
+    "setup-integration-agent": "bash scripts/setup/setup-integration-agent.sh",
+    "health": "bash scripts/dev/health-check.sh",
+    "create-agent": "node src/cli/create-agent.js",
+    "deploy-agent": "bash scripts/deploy-agent.sh",
+    "dev:cluster": "kind create cluster --name autoweave && kagent install",
+    "dev:clean": "bash scripts/cleanup/cleanup-test-resources.sh",
+    "dev:ui": "kubectl port-forward -n kagent-system svc/kagent-ui 8080:80",
+    "dev:appsmith": "kubectl port-forward -n appsmith-system svc/appsmith-appsmith 80:80",
+    "appsmith:logs": "kubectl logs -f -n appsmith-system -l app.kubernetes.io/instance=appsmith",
+    "appsmith:status": "kubectl get pods -n appsmith-system -l app.kubernetes.io/instance=appsmith",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "startup": "./start-autoweave.sh",
+    "startup:windows": "start-autoweave.bat",
+    "install-shortcut": "./create-desktop-shortcut.sh",
+    "build": "npm run lint && npm run test",
+    "prestart": "echo 'Starting AutoWeave...'",
+    "postinstall": "echo 'AutoWeave installé avec succès! Utilisez: npm run startup pour démarrer'"
+  },
+  "keywords": [
+    "kubernetes",
+    "agents",
+    "kagent",
+    "automation",
+    "orchestration",
+    "ai",
+    "openai"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT",
+  "dependencies": {
+    "@kubernetes/client-node": "^0.20.0",
+    "ajv": "^8.12.0",
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.0",
+    "express": "^4.18.0",
+    "inquirer": "^8.2.6",
+    "ioredis": "^5.3.2",
+    "node-fetch": "^2.7.0",
+    "openai": "^4.20.0",
+    "simple-git": "^3.28.0",
+    "swagger-parser": "^10.0.3",
+    "ws": "^8.14.0",
+    "yaml": "^2.3.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.0",
+    "supertest": "^6.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autoweave/autoweave.git"
+  },
+  "bugs": {
+    "url": "https://github.com/autoweave/autoweave/issues"
+  },
+  "homepage": "https://github.com/autoweave/autoweave#readme"
+}

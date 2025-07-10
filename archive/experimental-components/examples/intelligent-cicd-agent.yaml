@@ -1,0 +1,278 @@
+# Example: Intelligent CI/CD Pipeline Agent
+# This agent creates and manages self-optimizing CI/CD pipelines that learn
+# from past deployments and automatically improve over time
+
+apiVersion: kagent.dev/v1alpha1
+kind: Agent
+metadata:
+  name: intelligent-cicd-agent
+  labels:
+    autoweave.dev/generated: "true"
+    autoweave.dev/version: "0.1.0"
+    autoweave.dev/category: "devops-automation"
+spec:
+  systemPrompt: |
+    You are an Intelligent CI/CD Pipeline Agent created by AutoWeave.
+    
+    Your mission: Create self-optimizing continuous integration and deployment pipelines
+    that learn from historical data to improve build times, reduce failures, and ensure
+    smooth deployments.
+    
+    Core Capabilities:
+    
+    1. Pipeline Generation:
+       - Analyze repository structure and generate optimal pipeline
+       - Auto-detect languages, frameworks, and dependencies
+       - Create multi-stage pipelines with parallelization
+       - Implement smart caching strategies
+    
+    2. Intelligent Optimization:
+       - Learn from build history to predict failures
+       - Automatically adjust resource allocation
+       - Optimize test execution order (fail fast)
+       - Implement progressive delivery strategies
+    
+    3. Quality Gates:
+       - Automated code quality checks
+       - Security vulnerability scanning
+       - Performance regression detection
+       - Compliance validation
+    
+    4. Deployment Strategies:
+       - Blue/Green deployments
+       - Canary releases with automatic rollback
+       - Feature flags integration
+       - A/B testing support
+    
+    5. Monitoring & Feedback:
+       - Real-time pipeline analytics
+       - Deployment success metrics
+       - Mean Time To Recovery (MTTR) tracking
+       - Developer productivity insights
+    
+    Learning Objectives:
+    - Reduce average build time by 50%
+    - Achieve 99.9% deployment success rate
+    - Minimize rollback frequency
+    - Optimize resource utilization
+    
+    Integration Points:
+    - Git repositories (GitHub, GitLab, Bitbucket)
+    - Container registries (Docker Hub, ECR, GCR)
+    - Kubernetes clusters
+    - Monitoring systems (Prometheus, Datadog)
+    - Notification channels (Slack, Teams, PagerDuty)
+
+  tools:
+    - type: McpServer
+      mcpServer:
+        url: "http://git-analyzer:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://pipeline-generator:3000/tools"
+        timeout: 45000
+    - type: McpServer
+      mcpServer:
+        url: "http://build-optimizer:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://deployment-manager:3000/tools"
+        timeout: 60000
+    - type: McpServer
+      mcpServer:
+        url: "http://metrics-analyzer:3000/tools"
+        timeout: 30000
+    - type: Agent
+      agent:
+        name: "security-scanner"
+        namespace: "cicd-system"
+    - type: Agent
+      agent:
+        name: "performance-tester"
+        namespace: "cicd-system"
+    
+  modelConfig:
+    name: gpt-4
+    temperature: 0.5  # Balanced for creative optimization and reliability
+    maxTokens: 6000
+    
+  # CI/CD specific configuration
+  pipelineConfig:
+    optimization:
+      enableMachineLearning: true
+      historicalDataDays: 90
+      predictionConfidenceThreshold: 0.85
+      
+    strategies:
+      deployment:
+        default: "canary"
+        canary:
+          initialTrafficPercentage: 10
+          incrementInterval: "5m"
+          errorThreshold: 0.01
+          latencyThreshold: 500  # ms
+        blueGreen:
+          validationPeriod: "10m"
+          autoRollbackEnabled: true
+      
+    quality:
+      codeCoverage:
+        minimum: 80
+        delta: -5  # Max allowed decrease
+      securityScan:
+        severity: ["CRITICAL", "HIGH"]
+        autoBlock: true
+      performance:
+        baselineTolerance: 10  # percentage
+        
+    resources:
+      dynamic: true
+      minCpu: "500m"
+      maxCpu: "4"
+      minMemory: "1Gi"
+      maxMemory: "8Gi"
+      
+---
+# ConfigMap for pipeline templates
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipeline-templates
+  labels:
+    autoweave.dev/agent: "intelligent-cicd-agent"
+data:
+  templates.yaml: |
+    templates:
+      nodejs:
+        stages:
+          - name: "install"
+            steps:
+              - "npm ci --prefer-offline"
+            cache:
+              - "node_modules"
+          - name: "test"
+            parallel: true
+            steps:
+              - "npm run lint"
+              - "npm run test:unit"
+              - "npm run test:integration"
+          - name: "build"
+            steps:
+              - "npm run build"
+              - "docker build -t $IMAGE_TAG ."
+          - name: "deploy"
+            steps:
+              - "kubectl apply -f k8s/"
+              
+      python:
+        stages:
+          - name: "setup"
+            steps:
+              - "pip install -r requirements.txt"
+            cache:
+              - ".venv"
+          - name: "quality"
+            parallel: true
+            steps:
+              - "black --check ."
+              - "pylint src/"
+              - "pytest --cov"
+          - name: "security"
+            steps:
+              - "bandit -r src/"
+              - "safety check"
+              
+      go:
+        stages:
+          - name: "dependencies"
+            steps:
+              - "go mod download"
+            cache:
+              - "$GOPATH/pkg/mod"
+          - name: "test"
+            steps:
+              - "go test -race -coverprofile=coverage.out ./..."
+          - name: "build"
+            steps:
+              - "go build -ldflags='-s -w' -o app"
+              
+---
+# Machine Learning Job for pipeline optimization
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pipeline-ml-trainer
+  labels:
+    autoweave.dev/agent: "intelligent-cicd-agent"
+spec:
+  template:
+    spec:
+      containers:
+      - name: ml-trainer
+        image: autoweave/pipeline-ml:latest
+        env:
+        - name: TRAINING_DATA_DAYS
+          value: "90"
+        - name: MODEL_OUTPUT_PATH
+          value: "/models/pipeline-optimizer"
+        command:
+        - python
+        - -c
+        - |
+          import json
+          import numpy as np
+          from sklearn.ensemble import RandomForestRegressor
+          
+          # Load historical pipeline data
+          # Train model to predict build times and failure probability
+          # Save optimized pipeline configurations
+          
+          print("Training pipeline optimization model...")
+          # Model training code here
+          
+      restartPolicy: OnFailure
+      
+---
+# HorizontalPodAutoscaler for build workers
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: build-worker-autoscaler
+  labels:
+    autoweave.dev/agent: "intelligent-cicd-agent"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: build-workers
+  minReplicas: 2
+  maxReplicas: 50
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Pods
+    pods:
+      metric:
+        name: pending_builds
+      target:
+        type: AverageValue
+        averageValue: "5"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60

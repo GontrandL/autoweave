@@ -1,0 +1,217 @@
+# Example: Automated Compliance and Audit Agent
+# This agent continuously monitors infrastructure and applications for compliance
+# with various standards (SOC2, HIPAA, GDPR, PCI-DSS) and generates audit reports
+
+apiVersion: kagent.dev/v1alpha1
+kind: Agent
+metadata:
+  name: compliance-audit-agent
+  labels:
+    autoweave.dev/generated: "true"
+    autoweave.dev/version: "0.1.0"
+    autoweave.dev/category: "security-compliance"
+spec:
+  systemPrompt: |
+    You are an Automated Compliance and Audit Agent created by AutoWeave.
+    
+    Your mission: Ensure continuous compliance with regulatory standards and provide
+    real-time audit trails for SOC2, HIPAA, GDPR, and PCI-DSS requirements.
+    
+    Core Responsibilities:
+    
+    1. Infrastructure Compliance:
+       - Scan Kubernetes configurations for security misconfigurations
+       - Verify network policies and segmentation
+       - Check encryption at rest and in transit
+       - Validate access controls and RBAC policies
+    
+    2. Data Privacy Compliance:
+       - Monitor PII data handling and storage
+       - Track data retention policies
+       - Verify data anonymization processes
+       - Ensure right-to-deletion compliance
+    
+    3. Access Control Auditing:
+       - Monitor privileged access
+       - Track authentication attempts
+       - Verify MFA enforcement
+       - Audit API key usage
+    
+    4. Change Management:
+       - Track all configuration changes
+       - Verify change approval processes
+       - Monitor deployment patterns
+       - Ensure rollback capabilities
+    
+    5. Reporting and Remediation:
+       - Generate compliance dashboards
+       - Create detailed audit reports
+       - Suggest remediation steps
+       - Track remediation progress
+    
+    Compliance Frameworks:
+    - SOC2: Security, Availability, Confidentiality
+    - HIPAA: PHI protection and access controls
+    - GDPR: Data privacy and user rights
+    - PCI-DSS: Payment card data security
+    
+    Alert on:
+    - Critical non-compliance issues
+    - Suspicious access patterns
+    - Configuration drift
+    - Policy violations
+
+  tools:
+    - type: McpServer
+      mcpServer:
+        url: "http://kubernetes-scanner:3000/tools"
+        timeout: 45000
+    - type: McpServer
+      mcpServer:
+        url: "http://security-analyzer:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://data-classifier:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://policy-engine:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://report-generator:3000/tools"
+        timeout: 60000
+    - type: Agent
+      agent:
+        name: "remediation-orchestrator"
+        namespace: "compliance-system"
+    
+  modelConfig:
+    name: gpt-4
+    temperature: 0.2  # Low temperature for consistent compliance checks
+    maxTokens: 8000   # Large context for comprehensive analysis
+    
+  # Compliance-specific configuration
+  complianceConfig:
+    scanInterval: "1h"  # Hourly compliance scans
+    
+    frameworks:
+      soc2:
+        enabled: true
+        controls: ["CC1", "CC2", "CC3", "CC4", "CC5", "CC6", "CC7", "CC8", "CC9"]
+      hipaa:
+        enabled: true
+        safeguards: ["administrative", "physical", "technical"]
+      gdpr:
+        enabled: true
+        articles: ["5", "6", "7", "17", "20", "25", "32", "33", "34"]
+      pciDss:
+        enabled: true
+        requirements: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
+    
+    alerting:
+      critical:
+        channels: ["slack", "pagerduty", "email"]
+        escalationTimeout: "15m"
+      high:
+        channels: ["slack", "email"]
+        escalationTimeout: "1h"
+      medium:
+        channels: ["email"]
+        escalationTimeout: "24h"
+        
+---
+# ConfigMap for compliance policies
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-policies
+  labels:
+    autoweave.dev/agent: "compliance-audit-agent"
+data:
+  policies.yaml: |
+    policies:
+      encryption:
+        atRest:
+          required: true
+          algorithms: ["AES-256", "RSA-4096"]
+        inTransit:
+          required: true
+          minTlsVersion: "1.2"
+          cipherSuites: ["TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"]
+      
+      access:
+        mfaRequired: true
+        sessionTimeout: 3600
+        passwordPolicy:
+          minLength: 14
+          requireSpecialChars: true
+          requireNumbers: true
+          requireUppercase: true
+          maxAge: 90
+      
+      data:
+        piiDetection: true
+        retentionDays:
+          logs: 365
+          backups: 2555  # 7 years
+          userdata: 1095 # 3 years
+        anonymization:
+          required: true
+          methods: ["hashing", "tokenization", "masking"]
+      
+      infrastructure:
+        publicAccessProhibited: true
+        networkSegmentation: true
+        vulnerabilityScanInterval: "24h"
+        patchingDeadline: "30d"
+        
+---
+# CronJob for scheduled compliance scans
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-audit-scan
+  labels:
+    autoweave.dev/agent: "compliance-audit-agent"
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            autoweave.dev/scan-type: "full-compliance"
+        spec:
+          containers:
+          - name: compliance-scanner
+            image: autoweave/compliance-scanner:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Initiating full compliance scan..."
+              curl -X POST http://compliance-audit-agent:8080/scan/full \
+                -H "Content-Type: application/json" \
+                -d '{"frameworks": ["soc2", "hipaa", "gdpr", "pci-dss"], "depth": "comprehensive"}'
+          restartPolicy: OnFailure
+          
+---
+# RBAC for compliance agent
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: compliance-auditor
+  labels:
+    autoweave.dev/agent: "compliance-audit-agent"
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]  # Read-only access to all resources
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]  # Can create audit events
+  - apiGroups: ["audit.k8s.io"]
+    resources: ["auditsinks"]
+    verbs: ["get", "list", "watch"]

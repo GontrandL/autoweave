@@ -1,0 +1,143 @@
+# AutoWeave Rasa Endpoints Configuration
+# This file configures the endpoints for Rasa components
+
+# ==========================================================
+# ACTION SERVER ENDPOINT
+# ==========================================================
+
+action_endpoint:
+  url: "http://localhost:5055/webhook"
+  token: "autoweave-action-token"
+  
+# ==========================================================
+# TRACKER STORE CONFIGURATION
+# ==========================================================
+
+tracker_store:
+  type: memory
+  # Alternative: use Redis for persistence
+  # type: redis
+  # host: localhost
+  # port: 6379
+  # db: 0
+  # password: null
+  # key_prefix: "autoweave:"
+  
+# ==========================================================
+# EVENT BROKER CONFIGURATION
+# ==========================================================
+
+event_broker:
+  type: memory
+  # Alternative: use Redis for event streaming
+  # type: redis
+  # host: localhost
+  # port: 6379
+  # db: 1
+  # password: null
+  # key_prefix: "autoweave_events:"
+  
+# ==========================================================
+# LOCK STORE CONFIGURATION
+# ==========================================================
+
+lock_store:
+  type: memory
+  # Alternative: use Redis for distributed locks
+  # type: redis
+  # host: localhost
+  # port: 6379
+  # db: 2
+  # password: null
+  # key_prefix: "autoweave_locks:"
+  
+# ==========================================================
+# MODEL SERVER CONFIGURATION
+# ==========================================================
+
+model_server:
+  url: "http://localhost:5005"
+  token: "autoweave-model-token"
+  wait_time_between_pulls: 10
+  
+# ==========================================================
+# NLUG CONFIGURATION
+# ==========================================================
+
+nlg:
+  type: "rasa.core.nlg.template_nlg.TemplateNLG"
+  
+# ==========================================================
+# AUTOWEAVE INTEGRATION ENDPOINTS
+# ==========================================================
+
+# Custom endpoints for AutoWeave integration
+autoweave_endpoints:
+  api_url: "http://localhost:3002"
+  websocket_url: "ws://localhost:3002/ws"
+  health_check_url: "http://localhost:3002/api/health"
+  
+  # API endpoints
+  agents_endpoint: "http://localhost:3002/api/agents"
+  memory_endpoint: "http://localhost:3002/api/memory"
+  chat_endpoint: "http://localhost:3002/api/chat"
+  
+  # Authentication
+  api_key: "autoweave-api-key"
+  
+  # Timeout settings
+  timeout: 30
+  retry_attempts: 3
+  retry_delay: 1
+  
+# ==========================================================
+# MONITORING AND LOGGING
+# ==========================================================
+
+monitoring:
+  # Prometheus metrics endpoint
+  metrics_endpoint: "http://localhost:9090/metrics"
+  
+  # Logging configuration
+  log_level: "INFO"
+  log_file: "logs/rasa-autoweave.log"
+  
+  # Health check configuration
+  health_check:
+    enabled: true
+    interval: 30
+    timeout: 5
+    
+# ==========================================================
+# SECURITY CONFIGURATION
+# ==========================================================
+
+security:
+  # JWT configuration
+  jwt:
+    secret_key: "autoweave-jwt-secret"
+    algorithm: "HS256"
+    expiration_time: 3600
+    
+  # CORS configuration
+  cors:
+    origins: ["http://localhost:3000", "http://localhost:8081"]
+    methods: ["GET", "POST", "PUT", "DELETE"]
+    headers: ["Content-Type", "Authorization"]
+    
+# ==========================================================
+# DEVELOPMENT CONFIGURATION
+# ==========================================================
+
+development:
+  # Enable debug mode
+  debug: true
+  
+  # Auto-reload on changes
+  auto_reload: true
+  
+  # Detailed error messages
+  detailed_errors: true
+  
+  # Mock external services
+  mock_external_services: false

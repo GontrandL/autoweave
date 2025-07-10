@@ -1,0 +1,123 @@
+# AutoWeave Git Ignore File
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# AutoWeave specific
+# Generated reports
+SYSTEM_*.md
+DATABASE_*.md
+INTELLIGENT_*.md
+PRODUCTION_*.md
+
+# Backup files
+*.backup.*
+
+# Claude artifacts
+.claude/
+
+# Data directories
+data/
+tmp/
+
+# Build artifacts
+dist/
+build/
+
+# Cache
+.cache/
+.npm/
+.yarn/
+
+# Application logs
+app.log
+error.log
+access.log
+autoweave.log
+
+# Database files (if using local SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+
+# Secrets
+secrets/
+.secrets/
+.idea/
+*.tgz
+*.tar.gz
+/tmp/

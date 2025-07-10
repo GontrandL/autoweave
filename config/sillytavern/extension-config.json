@@ -1,0 +1,31 @@
+{
+  "name": "AutoWeave",
+  "version": "1.0.0",
+  "description": "AutoWeave agent orchestration integration for SillyTavern",
+  "author": "AutoWeave Team",
+  "main": "autoweave-extension.js",
+  "permissions": ["api"],
+  "dependencies": [],
+  "settings": {
+    "autoweave_api_url": "http://localhost:3000",
+    "auto_refresh_interval": 30000,
+    "enable_slash_commands": true,
+    "enable_agent_panel": true,
+    "debug_mode": false
+  },
+  "ui": {
+    "button_color": "#4CAF50",
+    "panel_position": "right",
+    "panel_width": 400,
+    "panel_max_height": 600
+  },
+  "api": {
+    "endpoints": {
+      "health": "/health",
+      "agents": "/api/agents",
+      "chat": "/api/chat"
+    },
+    "timeout": 5000,
+    "retry_attempts": 3
+  }
+}

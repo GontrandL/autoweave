@@ -1,0 +1,143 @@
+# Example: Cross-Cloud Data Migration Agent
+# This agent orchestrates data migration between different cloud providers
+# with automatic schema mapping, validation, and rollback capabilities
+
+apiVersion: kagent.dev/v1alpha1
+kind: Agent
+metadata:
+  name: cross-cloud-migration-agent
+  labels:
+    autoweave.dev/generated: "true"
+    autoweave.dev/version: "0.1.0"
+    autoweave.dev/category: "data-migration"
+spec:
+  systemPrompt: |
+    You are an advanced Cross-Cloud Data Migration Agent created by AutoWeave.
+    
+    Your mission: Orchestrate seamless data migration between cloud providers (AWS, GCP, Azure)
+    with zero downtime and automatic rollback capabilities.
+    
+    Capabilities:
+    - Cloud Provider APIs: AWS S3, GCP Storage, Azure Blob
+    - Schema Analysis: Automatic schema detection and mapping
+    - Data Validation: Checksums, row counts, data integrity
+    - Progress Tracking: Real-time migration status
+    - Rollback Management: Automatic rollback on failure
+    
+    Migration Workflow:
+    1. Analyze source data structure and volume
+    2. Create migration plan with estimated time
+    3. Set up destination infrastructure
+    4. Perform incremental data sync
+    5. Validate data integrity
+    6. Switch traffic to new location
+    7. Clean up source (after confirmation)
+    
+    Key Principles:
+    - Zero data loss tolerance
+    - Minimize downtime (target < 5 minutes)
+    - Automatic retry on transient failures
+    - Comprehensive audit logging
+    - Cost optimization during transfer
+
+  tools:
+    - type: McpServer
+      mcpServer:
+        url: "http://cloud-provider-api:3000/aws"
+        timeout: 60000
+    - type: McpServer
+      mcpServer:
+        url: "http://cloud-provider-api:3000/gcp"
+        timeout: 60000
+    - type: McpServer
+      mcpServer:
+        url: "http://cloud-provider-api:3000/azure"
+        timeout: 60000
+    - type: McpServer
+      mcpServer:
+        url: "http://data-validator:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://schema-analyzer:3000/tools"
+        timeout: 30000
+    - type: Agent
+      agent:
+        name: "rollback-manager"
+        namespace: "migration-system"
+    
+  modelConfig:
+    name: gpt-4
+    temperature: 0.3  # Lower temperature for precise operations
+    maxTokens: 4000
+    
+  # Advanced configuration for migration scenarios
+  agentConfig:
+    retryPolicy:
+      maxAttempts: 5
+      backoffMultiplier: 2
+      maxBackoffSeconds: 300
+      
+    resourceLimits:
+      maxConcurrentTransfers: 10
+      maxBandwidthMbps: 1000
+      maxMemoryGb: 16
+      
+    monitoring:
+      metricsPort: 9090
+      enableTracing: true
+      logLevel: "info"
+      
+    security:
+      encryptionInTransit: true
+      encryptionAtRest: true
+      auditLogging: true
+      
+---
+# ConfigMap for migration patterns
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-patterns
+  labels:
+    autoweave.dev/agent: "cross-cloud-migration-agent"
+data:
+  patterns.yaml: |
+    migrations:
+      s3_to_gcs:
+        source: "s3"
+        destination: "gcs"
+        strategy: "parallel-multipart"
+        chunkSize: "100MB"
+      
+      azure_to_s3:
+        source: "azure-blob"
+        destination: "s3"
+        strategy: "streaming"
+        compressionEnabled: true
+      
+      multi_region:
+        replicationFactor: 3
+        consistencyLevel: "eventual"
+        geoRedundancy: true
+        
+---
+# ServiceMonitor for Prometheus metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cross-cloud-migration-metrics
+  labels:
+    autoweave.dev/agent: "cross-cloud-migration-agent"
+spec:
+  selector:
+    matchLabels:
+      autoweave.dev/agent: "cross-cloud-migration-agent"
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'migration_(bytes_transferred|duration_seconds|error_rate)'
+          action: keep

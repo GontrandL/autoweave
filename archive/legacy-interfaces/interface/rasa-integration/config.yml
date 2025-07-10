@@ -1,0 +1,340 @@
+# AutoWeave Rasa Configuration
+# This file configures the Rasa NLU and Core components for AutoWeave integration
+
+version: "3.1"
+
+# ==========================================================
+# RASA NLU PIPELINE
+# ==========================================================
+
+pipeline:
+  # Language model and tokenization
+  - name: WhitespaceTokenizer
+  - name: RegexFeaturizer
+  - name: LexicalSyntacticFeaturizer
+  - name: CountVectorsFeaturizer
+  - name: CountVectorsFeaturizer
+    analyzer: char_wb
+    min_ngram: 1
+    max_ngram: 4
+    
+  # Intent classification
+  - name: DIETClassifier
+    epochs: 100
+    constrain_similarities: true
+    model_confidence: cosine
+    
+  # Entity extraction
+  - name: EntitySynonymMapper
+  - name: ResponseSelector
+    epochs: 100
+    constrain_similarities: true
+    model_confidence: cosine
+    
+  # Regex and pattern matching for AutoWeave specific entities
+  - name: RegexEntityExtractor
+    case_sensitive: false
+    use_lookup_tables: true
+    
+  # Fallback classifier
+  - name: FallbackClassifier
+    threshold: 0.3
+    ambiguity_threshold: 0.1
+
+# ==========================================================
+# RASA CORE POLICIES
+# ==========================================================
+
+policies:
+  # Rule-based policies for specific patterns
+  - name: RulePolicy
+    core_fallback_threshold: 0.3
+    core_fallback_action_name: "action_default_fallback"
+    enable_fallback_prediction: true
+    
+  # Memoization policy for exact matches
+  - name: MemoizationPolicy
+    max_history: 5
+    
+  # Transformer-based dialogue management
+  - name: TEDPolicy
+    max_history: 5
+    epochs: 100
+    constrain_similarities: true
+    model_confidence: cosine
+    batch_size: 256
+    
+  # Fallback policy
+  - name: FallbackPolicy
+    nlu_threshold: 0.3
+    core_threshold: 0.3
+    fallback_action_name: "action_default_fallback"
+
+# ==========================================================
+# ASSISTANT CONFIGURATION
+# ==========================================================
+
+assistant_id: autoweave_assistant
+
+# ==========================================================
+# LANGUAGE CONFIGURATION
+# ==========================================================
+
+language: en
+
+# ==========================================================
+# CUSTOM COMPONENTS CONFIGURATION
+# ==========================================================
+
+# Custom regex patterns for AutoWeave entities
+regex_features:
+  - name: "agent_id"
+    pattern: "agent-[a-zA-Z0-9-]+"
+  - name: "workflow_id"
+    pattern: "workflow-[a-zA-Z0-9-]+"
+  - name: "task_id"
+    pattern: "task-[a-zA-Z0-9-]+"
+  - name: "file_extension"
+    pattern: "\\.(pdf|doc|docx|txt|csv|xlsx|json|yaml|yml|py|js|ts|html|css|md)$"
+
+# ==========================================================
+# ENTITY SYNONYMS
+# ==========================================================
+
+entity_synonyms:
+  - synonym: "create"
+    examples: |
+      - make
+      - build
+      - generate
+      - new
+      - add
+      - setup
+      - initialize
+      
+  - synonym: "delete"
+    examples: |
+      - remove
+      - destroy
+      - cancel
+      - stop
+      - terminate
+      - kill
+      
+  - synonym: "list"
+    examples: |
+      - show
+      - display
+      - get
+      - retrieve
+      - view
+      - see
+      
+  - synonym: "agent"
+    examples: |
+      - bot
+      - assistant
+      - worker
+      - service
+      - process
+      
+  - synonym: "workflow"
+    examples: |
+      - process
+      - pipeline
+      - flow
+      - sequence
+      - automation
+      
+  - synonym: "task"
+    examples: |
+      - job
+      - work
+      - activity
+      - action
+      - todo
+      
+  - synonym: "file"
+    examples: |
+      - document
+      - data
+      - content
+      - attachment
+      - resource
+
+# ==========================================================
+# LOOKUP TABLES
+# ==========================================================
+
+lookup_tables:
+  - name: "file_types"
+    elements: |
+      - pdf
+      - doc
+      - docx
+      - txt
+      - csv
+      - xlsx
+      - json
+      - yaml
+      - yml
+      - py
+      - js
+      - ts
+      - html
+      - css
+      - md
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - svg
+      - zip
+      - tar
+      - gz
+      
+  - name: "common_actions"
+    elements: |
+      - create
+      - delete
+      - list
+      - show
+      - update
+      - modify
+      - execute
+      - run
+      - start
+      - stop
+      - pause
+      - resume
+      - search
+      - find
+      - analyze
+      - process
+      - upload
+      - download
+      - export
+      - import
+      
+  - name: "system_components"
+    elements: |
+      - agent
+      - workflow
+      - task
+      - memory
+      - file
+      - system
+      - health
+      - status
+      - metrics
+      - dashboard
+      - api
+      - database
+      - server
+      - service
+      - process
+      - cluster
+      - kubernetes
+      - container
+      - pod
+
+# ==========================================================
+# TRAINING CONFIGURATION
+# ==========================================================
+
+training:
+  # Training parameters
+  batch_size: 256
+  epochs: 100
+  validation_split: 0.2
+  
+  # Early stopping
+  early_stopping:
+    patience: 10
+    restore_best_weights: true
+    
+  # Learning rate scheduling
+  learning_rate_schedule:
+    initial_learning_rate: 0.001
+    decay_steps: 1000
+    decay_rate: 0.96
+    
+  # Data augmentation
+  data_augmentation:
+    enabled: true
+    synonym_replacement: true
+    random_insertion: true
+    random_deletion: true
+    
+# ==========================================================
+# DEBUGGING CONFIGURATION
+# ==========================================================
+
+debug:
+  # Enable detailed logging
+  log_level: INFO
+  
+  # Save training plots
+  save_plots: true
+  
+  # Validation configuration
+  validation:
+    enabled: true
+    cross_validation_folds: 5
+    
+  # Testing configuration
+  testing:
+    enabled: true
+    test_split: 0.1
+    
+# ==========================================================
+# CUSTOM CONFIGURATION FOR AUTOWEAVE
+# ==========================================================
+
+autoweave:
+  # API configuration
+  api_url: "http://localhost:3002"
+  api_key: "autoweave-api-key"
+  timeout: 30
+  
+  # Feature flags
+  features:
+    agent_management: true
+    workflow_management: true
+    memory_management: true
+    task_management: true
+    file_management: true
+    system_monitoring: true
+    
+  # Response formatting
+  response_format:
+    max_length: 1000
+    use_markdown: true
+    include_timestamps: true
+    include_metadata: true
+    
+  # Context management
+  context:
+    max_history: 10
+    context_window: 5
+    maintain_user_context: true
+    
+  # Error handling
+  error_handling:
+    max_retries: 3
+    retry_delay: 1
+    fallback_responses: true
+    
+  # Integration settings
+  integrations:
+    websocket:
+      enabled: true
+      url: "ws://localhost:3002/ws"
+      
+    memory:
+      enabled: true
+      auto_save: true
+      
+    monitoring:
+      enabled: true
+      metrics_interval: 60
