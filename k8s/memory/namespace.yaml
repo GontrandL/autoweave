@@ -51,5 +51,5 @@ stringData:
   # Qdrant API Key
   QDRANT_API_KEY: "test-qdrant-key"
   
-  # OpenAI API Key for embeddings
-  OPENAI_API_KEY: "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"
+  # OpenAI API Key for embeddings (to be set from external secret)
+  OPENAI_API_KEY: "your-openai-api-key-here"

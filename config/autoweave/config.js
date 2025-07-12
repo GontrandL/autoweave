@@ -6,7 +6,8 @@ module.exports = {
 
     agentWeaver: {
         openaiApiKey: process.env.OPENAI_API_KEY,
-        model: 'gpt-4',
+        openrouterApiKey: process.env.OPENROUTER_API_KEY,
+        model: process.env.OPENROUTER_API_KEY ? 'anthropic/claude-3-haiku' : 'gpt-4',
         temperature: 0.7,
         maxTokens: 4000,
         timeout: 30000
@@ -59,6 +60,24 @@ module.exports = {
             apiKey: process.env.QDRANT_API_KEY,
             collection: process.env.QDRANT_COLLECTION || 'autoweave',
             mock: process.env.QDRANT_MOCK === 'true' || !process.env.QDRANT_HOST
+        },
+        
+        // Graph configuration (for HybridMemoryManager)
+        graph: {
+            host: process.env.MEMGRAPH_HOST || 'localhost',
+            port: parseInt(process.env.MEMGRAPH_PORT) || 7687,
+            user: process.env.MEMGRAPH_USER || 'admin',
+            password: process.env.MEMGRAPH_PASSWORD || 'admin123!',
+            database: process.env.MEMGRAPH_DATABASE || 'memgraph',
+            mock: process.env.MEMGRAPH_MOCK === 'true' || !process.env.MEMGRAPH_HOST
+        },
+        
+        // Redis configuration (for ML cache)
+        redis: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT) || 6379,
+            password: process.env.REDIS_PASSWORD,
+            db: parseInt(process.env.REDIS_DB) || 0
         },
         
         // Hybrid memory configuration

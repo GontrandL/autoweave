@@ -11,6 +11,9 @@ const chatRoutes = require('./chat');
 const healthRoutes = require('./health');
 const kagentRoutes = require('./kagent');
 const configRoutes = require('./config');
+const selfAwarenessRoutes = require('./self-awareness');
+const searchRoutes = require('./search');
+const codingMemoryRoutes = require('./coding-memory');
 
 /**
  * Routes Index - Central routing configuration for AutoWeave API
@@ -24,7 +27,10 @@ class RoutesIndex {
             chat: chatRoutes,
             health: healthRoutes,
             kagent: kagentRoutes,
-            config: configRoutes
+            config: configRoutes,
+            selfAwareness: selfAwarenessRoutes,
+            search: searchRoutes,
+            codingMemory: codingMemoryRoutes
         };
         
         this.services = {
@@ -111,6 +117,9 @@ class RoutesIndex {
         app.use('/api/v1/health', this.routes.health);
         app.use('/api/v1/kagent', this.routes.kagent);
         app.use('/api/v1/config', this.routes.config.router);
+        app.use('/api/v1/self-awareness', this.routes.selfAwareness);
+        app.use('/api/v1/search', this.routes.search);
+        app.use('/api/v1/memory/code', this.routes.codingMemory);
         
         // Backward compatibility routes (without versioning)
         app.use('/api/memory', this.routes.memory);
@@ -122,6 +131,9 @@ class RoutesIndex {
         app.use('/api/sources', this.routes.config.router);
         app.use('/api/debug', this.routes.config.router);
         app.use('/api/gitops', this.routes.config.router);
+        app.use('/api/self-awareness', this.routes.selfAwareness);
+        app.use('/api/search', this.routes.search);
+        app.use('/api/memory/code', this.routes.codingMemory);
         
         logger.debug('Routes mounted to Express app');
     }
@@ -142,14 +154,20 @@ class RoutesIndex {
                     chat: '/api/chat',
                     memory: '/api/memory',
                     kagent: '/api/kagent',
-                    health: '/api/health'
+                    health: '/api/health',
+                    selfAwareness: '/api/self-awareness',
+                    search: '/api/search',
+                    codingMemory: '/api/memory/code'
                 },
                 documentation: {
                     agents: 'CRUD operations for AI agents',
                     chat: 'OpenAI-compatible chat completions',
                     memory: 'Hybrid memory system (mem0 + GraphRAG)',
                     kagent: 'Kubernetes native agent runtime',
-                    health: 'System health and monitoring'
+                    health: 'System health and monitoring',
+                    selfAwareness: 'System consciousness and synchronization',
+                    search: 'Web, code, and documentation search capabilities',
+                    codingMemory: 'Intelligent code memory with context and relations'
                 },
                 features: [
                     'Natural language agent creation',
