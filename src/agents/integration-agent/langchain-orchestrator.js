@@ -11,10 +11,22 @@ class LangChainOrchestrator {
         this.config = config;
         this.logger = new Logger('LangChainOrchestrator');
         
-        // OpenAI client (reuse existing config)
-        this.openai = new OpenAI({
-            apiKey: config.openaiApiKey || config.agentWeaver?.openaiApiKey
-        });
+        // OpenAI/OpenRouter client (reuse existing config)
+        if (config.openrouterApiKey || config.agentWeaver?.openrouterApiKey || process.env.OPENROUTER_API_KEY) {
+            this.logger.info('Using OpenRouter API for LangChain Orchestrator');
+            this.openai = new OpenAI({
+                apiKey: config.openrouterApiKey || config.agentWeaver?.openrouterApiKey || process.env.OPENROUTER_API_KEY,
+                baseURL: 'https://openrouter.ai/api/v1',
+                defaultHeaders: {
+                    'HTTP-Referer': 'https://github.com/autoweave/autoweave',
+                    'X-Title': 'AutoWeave'
+                }
+            });
+        } else {
+            this.openai = new OpenAI({
+                apiKey: config.openaiApiKey || config.agentWeaver?.openaiApiKey
+            });
+        }
         
         // Tool registry
         this.tools = new Map();

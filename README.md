@@ -877,6 +877,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📚 Documentation
 
+### Core Documentation
+- **[CLAUDE.md](CLAUDE.md)** - AI assistant guide for development
+- **[PLANNING.md](PLANNING.md)** - Project vision, architecture, and technology stack
+- **[TASKS.md](TASKS.md)** - Development tasks organized by milestones
+- **[IMPROVEMENT_ROADMAP.md](IMPROVEMENT_ROADMAP.md)** - Architecture improvements and long-term roadmap
+
+### Technical Documentation
 - **[Integration Agent Module](docs/Integration-Agent-Module.md)** - Complete guide for OpenAPI to Kubernetes agent transformation
 - **[Module Integration Agent Study](docs/Module%20Integration%20Agent.md)** - Technical specification and implementation guide
 - **[API Reference](docs/api-reference.md)** - Comprehensive API documentation

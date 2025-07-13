@@ -1,0 +1,19 @@
+packages:
+  # Core packages
+  - 'packages/core'
+  - 'packages/memory'
+  - 'packages/agents'
+  - 'packages/backend'
+  - 'packages/ui'
+  - 'packages/cli'
+  - 'packages/integrations'
+  - 'packages/deployment'
+  
+  # Shared packages
+  - 'packages/shared/*'
+  
+  # Applications
+  - 'apps/*'
+  
+  # Tools and scripts
+  - 'tools/*'

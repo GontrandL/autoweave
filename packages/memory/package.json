@@ -1,0 +1,20 @@
+{
+  "name": "@autoweave/memory",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "echo \"No build step\"",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@autoweave/core": "file:../core",
+    "@autoweave/shared": "file:../shared",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.42.0"
+  }
+}

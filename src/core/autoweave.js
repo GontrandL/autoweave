@@ -7,6 +7,7 @@ const HybridMemoryManager = require('../memory/hybrid-memory');
 const { UIAgent } = require('../agui/ui-agent');
 const { IntegrationAgentModule } = require('../agents/integration-agent');
 const { AutoWeaveMCPServer } = require('../mcp/autoweave-mcp-server');
+const UnifiedAutoWeaveMCPServer = require('../mcp/unified-autoweave-mcp-server');
 const { ConfigurationIntelligence } = require('./config-intelligence');
 const { DebuggingAgent } = require('../agents/debugging-agent');
 const { FreshSourcesService } = require('../services/fresh-sources-service');
@@ -36,6 +37,7 @@ class AutoWeave {
         
         // New services for meta-configuration
         this.mcpServer = new AutoWeaveMCPServer(config, this);
+        this.unifiedMCPServer = new UnifiedAutoWeaveMCPServer(this);
         this.configIntelligence = null; // Initialized after core components
         this.debuggingAgent = null; // Initialized after core components
         this.freshSources = new FreshSourcesService(config.freshSources);
@@ -98,14 +100,16 @@ class AutoWeave {
                 this.memoryManager
             );
             
-            // Initialize MCP server
+            // Initialize MCP servers
             await this.mcpServer.initialize();
+            await this.unifiedMCPServer.initialize();
 
             // 6. Start web interface with services
             await this.startWebInterface();
             
-            // 7. Start MCP server on separate port
+            // 7. Start MCP servers on separate ports
             this.mcpServer.start(this.config.mcpPort || 3002);
+            // Unified MCP server will be integrated into AutoWeave APIs
 
             this.isInitialized = true;
             this.logger.success('✅ AutoWeave initialized with service architecture');

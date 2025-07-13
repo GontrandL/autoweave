@@ -1,0 +1,25 @@
+{
+  "name": "@autoweave/integrations",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "echo \"No build step\"",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@autoweave/shared": "file:../shared",
+    "@autoweave/core": "file:../core",
+    "@autoweave/memory": "file:../memory",
+    "express": "^4.18.2",
+    "swagger-parser": "^10.0.3",
+    "ajv": "latest",
+    "node-fetch": "latest",
+    "js-yaml": "latest"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.42.0"
+  }
+}

@@ -188,8 +188,11 @@ class HybridMemoryManager {
             });
             this.cacheResult(localCacheKey, result);
             
-            // Métriques
+            // Métriques (limit array size to prevent memory growth)
             this.metrics.search_times.push(Date.now() - startTime);
+            if (this.metrics.search_times.length > 1000) {
+                this.metrics.search_times = this.metrics.search_times.slice(-1000);
+            }
             
             this.logger.success(`Hybrid search completed in ${Date.now() - startTime}ms`);
             return result;
@@ -381,6 +384,30 @@ class HybridMemoryManager {
     }
 
     cacheResult(key, result) {
+        // Limit cache size to prevent memory leaks
+        if (this.searchCache.size > 1000) {
+            // Remove oldest entries
+            const entriesToRemove = [];
+            const now = Date.now();
+            for (const [k, v] of this.searchCache.entries()) {
+                if (now - v.timestamp > this.cacheTimeout) {
+                    entriesToRemove.push(k);
+                }
+            }
+            
+            // If not enough expired entries, remove oldest 100
+            if (entriesToRemove.length < 100) {
+                const sortedEntries = Array.from(this.searchCache.entries())
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)
+                    .slice(0, 100);
+                entriesToRemove.push(...sortedEntries.map(e => e[0]));
+            }
+            
+            // Clean up
+            entriesToRemove.forEach(k => this.searchCache.delete(k));
+            this.logger.debug(`Cache cleanup: removed ${entriesToRemove.length} entries`);
+        }
+        
         this.searchCache.set(key, {
             result,
             timestamp: Date.now()

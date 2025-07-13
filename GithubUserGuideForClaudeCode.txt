@@ -1,0 +1,179 @@
+ 
+Voici un manuel pragmatique, à jour au 11 juillet 2025, pour publier efficacement vos projets ClaudeCode sur GitHub. Il rassemble les nouveautés 2024-2025 (rulesets, sub-issues, Copilot multi-modèle, etc.), des bonnes pratiques éprouvées et une check-list « tips & tricks » prête à l’emploi.
+
+---
+
+## 1. Préparer votre environnement local avec ClaudeCode
+
+### 1.1 Configurer Git et GitHub CLI
+
+Installez Git et le GitHub CLI (`gh`) : le CLI vous évite d’ouvrir le navigateur pour créer un dépôt ou lancer une *pull-request* (PR) ([The GitHub Blog][1]).
+Dans un terminal intégré à ClaudeCode :
+
+```bash
+gh auth login --web          # Authentification OAuth / SSO
+gh repo create mon-projet    # Crée dépôt distant + push initial
+gh pr create --web           # Ouvre la PR dans le navigateur
+```
+
+### 1.2 Paramètres Git indispensables
+
+* `git config --global user.name / user.email` – signature propre.
+* `git config --global init.defaultBranch main` – GitHub privilégie **main** comme branche par défaut ([GitHub Docs][2]).
+
+---
+
+## 2. Initialiser et organiser le dépôt
+
+### 2.1 Fichiers racine
+
+| Fichier                                  | Rôle                                              |
+| ---------------------------------------- | ------------------------------------------------- |
+| `README.md`                              | Présente le projet et la stack ([GitHub Docs][2]) |
+| `LICENSE`                                | Clarifie vos droits (MIT, Apache-2, AGPL, etc.)   |
+| `.gitignore`                             | Évite de versionner binaires, secrets             |
+| `CODE_OF_CONDUCT.md` & `CONTRIBUTING.md` | Cadre la communauté                               |
+
+Ajoutez un **ruleset** GitHub pour imposer le format de commit, exiger des revues ou bloquer les `force-push` ; jusqu’à 75 rulesets sont possibles par dépôt ([GitHub Docs][3]).
+
+### 2.2 Branch naming & workflow
+
+* `main` : prod.
+* `feat/*`, `fix/*`, `docs/*` : branches courtes.
+* Nettoyez avec `git branch -d` après fusion.
+
+---
+
+## 3. Commits lisibles & versionnage sémantique
+
+* Adoptez **Conventional Commits** (`feat:`, `fix:`, etc.) pour générer changelog et version ([GitHub][4]).
+* Automatisez les releases : `semantic-release` incrémente la version, rédige les notes et pousse le tag.
+
+---
+
+## 4. Automatiser CI/CD avec GitHub Actions
+
+| Étape             | Exemple d’action                             |
+| ----------------- | -------------------------------------------- |
+| Build & tests     | `actions/setup-node`, `actions/setup-python` |
+| Lint & unit tests | `eslint`, `pytest-github-actions`            |
+| Release           | `semantic-release`                           |
+| Déploiement       | `peaceiris/actions-gh-pages` ([GitHub][5])   |
+
+### 4.1 Nouveautés 2025
+
+* Contrôles d’inbound domains et nouveaux *runner* controller pour plus de sécurité et de performance ([The GitHub Blog][6], [The GitHub Blog][7]).
+* Meilleure syntaxe YAML : colonnes alignées, secrets scellés. Révisez la référence officielle ([GitHub Docs][8]).
+
+### 4.2 Bonnes pratiques sécurité
+
+* Activez les **artifact attestations** pour la traçabilité ([GitHub Docs][9]).
+* Employez `${{ secrets.* }}` pour les clés API (jamais en clair).
+* Limitez les permissions avec `permissions:` minimalistes.
+* Utilisez des *composite actions* locales pour ne pas dépendre de tiers inconnus ([Exercism][10]).
+
+---
+
+## 5. Déployer sur GitHub Pages
+
+Deux approches :
+
+1. **Branche de publication** : `gh-pages` ou `/docs` dans `main` ([GitHub Docs][11]).
+2. **Workflow Actions** avec `peaceiris/actions-gh-pages` :
+
+```yaml
+- uses: peaceiris/actions-gh-pages@v4
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    publish_dir: ./public
+```
+
+Un push sur `main` déclenche le build et la mise en ligne automatique ([GitHub][5]).
+
+---
+
+## 6. Sécurité et qualité du code
+
+* **Dependabot** : surveille les CVE dans vos dépendances et crée des PR de mise à jour ([GitHub Docs][12]).
+* **CodeQL** : analyse statique, désormais plus rapide, +28 règles et scan des workflows Actions ([The GitHub Blog][13]).
+* Activez **branch protection** + **Required reviews** pour `main`.
+
+---
+
+## 7. Gestion de projet et collaboration
+
+### 7.1 Issues & Projects 2025
+
+* Sous-issues, nouveaux types d’issue et recherche avancée sont GA ([The GitHub Blog][14]).
+* Les *Projects boards* ont un quota d’items augmenté : suivez backlog et sprints directement sur GitHub.
+
+### 7.2 Pull Requests efficaces
+
+* **Draft PR** pour signaler un travail en cours.
+* **Reviewers automatiques** via `CODEOWNERS`.
+* Squash & merge pour un historique propre.
+
+---
+
+## 8. IA et productivité
+
+* **GitHub Copilot** prend désormais en charge plusieurs modèles : Claude 3.5, Gemini 1.5 Pro, GPT-4o ([The Verge][15]).
+* Microsoft intègre l’agent de programmation **Anthropic** (Claude) dans GitHub ; vous pourrez déclencher des suggestions ou corrections de code directement depuis l’interface PR ([Reuters][16]).
+* Dans ClaudeCode, configurez le « AI pair-programmer » pour envoyer le diff courant à Copilot et recevoir un patch appliquable (`gh pr checkout <id>` > `gh pr diff`).
+
+---
+
+## 9. Tips & Tricks express
+
+1. **`git switch -c feat/...`** : crée & bascule de branche en un mot.
+2. **`gh repo view --web`** pour ouvrir le dépôt GitHub dans le navigateur.
+3. **`gh pr diff <id> | pbcopy`** : copie le diff pour un partage rapide.
+4. Activez les **rule insights** sous *Settings › Code security*.
+5. Stockez vos badges CI dans `README.md` pour la crédibilité.
+6. Ajoutez `.nvmrc` ou `.tool-versions` pour figer les versions d’outils.
+7. Utilisez **GitHub Actions caching** (`actions/cache`) pour accélérer vos builds.
+8. `git restore --staged <fichier>` : retire un fichier de l’index sans perdre vos modifs.
+9. `gh pr checkout <num>` : teste une PR localement.
+10. **`gh run view --log`** : inspecte les logs Actions sans quitter le terminal.
+11. Taggez vos commits de release : `v1.2.0` (Semantic Versioning).
+12. Ajoutez un **badge « Latest release »** pour indiquer la version stable.
+13. **Templates d’issues** pour guider le reporting.
+14. **Git hooks pré-commit** : exécutez ESLint/Black avant chaque commit.
+15. **Automerge** + **branch protection** : fusionnez les PR de dépendances dès que CI passe.
+16. Surveillez les **alertes Dependabot** dans l’onglet *Security*.
+17. Raccourci web : remplacez `github.com` par `github.dev` pour éditer en ligne.
+18. **`git rebase -i --autosquash`** pour nettoyer un historique avant PR.
+19. Utilisez les **GitHub discussions** comme forum interne.
+20. **`git worktree`** pour tester plusieurs branches en parallèle sans clonage.
+
+---
+
+## 10. Ressources complémentaires
+
+* **Docs GitHub Actions** – panorama complet ([GitHub Docs][17]).
+* **Security for GitHub Actions** – guide officiel ([GitHub Docs][9]).
+* **Workflow syntax** – référence YAML ([GitHub Docs][8]).
+* **Tutoriel déploiement Pages** (Vidéo) pour un walkthrough visuel ([YouTube][18]).
+
+---
+
+En appliquant ces étapes, vous passerez d’un simple dépôt de code à un pipeline complet : code qualité, intégration continue, release automatisé et déploiement instantané. Faites-en votre *check-list* quotidienne et GitHub deviendra votre meilleur allié pour publier et maintenir vos applications ClaudeCode. 🎉
+
+[1]: https://github.blog/developer-skills/github/how-to-level-up-your-git-game-with-github-cli/?utm_source=chatgpt.com "How to level up your Git game with GitHub CLI"
+[2]: https://docs.github.com/en/repositories/creating-and-managing-repositories/best-practices-for-repositories?utm_source=chatgpt.com "Best practices for repositories - GitHub Docs"
+[3]: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets?utm_source=chatgpt.com "About rulesets - GitHub Docs"
+[4]: https://github.com/semantic-release/semantic-release?utm_source=chatgpt.com "semantic-release/semantic-release: :package::rocket - GitHub"
+[5]: https://github.com/peaceiris/actions-gh-pages?utm_source=chatgpt.com "GitHub Actions for GitHub Pages Deploy static files and publish your ..."
+[6]: https://github.blog/changelog/2025-04-15-upcoming-breaking-changes-and-releases-for-github-actions/?utm_source=chatgpt.com "Upcoming breaking changes and releases for GitHub Actions"
+[7]: https://github.blog/changelog/2025-05-15-new-releases-for-github-actions/?utm_source=chatgpt.com "New releases for GitHub Actions - GitHub Changelog"
+[8]: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions?utm_source=chatgpt.com "Workflow syntax for GitHub Actions"
+[9]: https://docs.github.com/en/actions/security-for-github-actions?utm_source=chatgpt.com "Security for GitHub Actions - GitHub Docs"
+[10]: https://exercism.org/docs/building/github/gha-best-practices?utm_source=chatgpt.com "GitHub Actions: Best Practices | Exercism's Docs"
+[11]: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site?utm_source=chatgpt.com "Configuring a publishing source for your GitHub Pages site"
+[12]: https://docs.github.com/en/code-security/dependabot?utm_source=chatgpt.com "Keeping your supply chain secure with Dependabot - GitHub Docs"
+[13]: https://github.blog/changelog/2025-02-12-codeql-performance-and-coverage-improvements-in-recent-releases/?utm_source=chatgpt.com "CodeQL performance and coverage improvements in recent releases"
+[14]: https://github.blog/changelog/2025-04-09-evolving-github-issues-and-projects/?utm_source=chatgpt.com "Evolving GitHub Issues and Projects - GitHub Changelog"
+[15]: https://www.theverge.com/2024/10/29/24282544/github-copilot-multi-model-anthropic-google-open-ai-github-spark-announcement?utm_source=chatgpt.com "GitHub Copilot will support models from Anthropic, Google, and OpenAI"
+[16]: https://www.reuters.com/business/microsoft-add-anthropics-ai-coding-agent-its-github-service-2025-05-20/?utm_source=chatgpt.com "Microsoft to add Anthropic's AI coding agent to its GitHub service"
+[17]: https://docs.github.com/actions?utm_source=chatgpt.com "GitHub Actions documentation - GitHub Docs"
+[18]: https://www.youtube.com/watch?v=AD-3nVI3-_U&utm_source=chatgpt.com "How to Deploy a Static Website to GitHub Pages - YouTube"

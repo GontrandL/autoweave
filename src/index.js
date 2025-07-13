@@ -81,6 +81,14 @@ async function main() {
 
     try {
         logger.info('🚀 Starting AutoWeave + kagent - Self-Weaving Agent Orchestrator');
+        
+        // Setup periodic garbage collection to prevent memory buildup
+        setInterval(() => {
+            if (global.gc) {
+                global.gc();
+                logger.debug('Manual garbage collection performed');
+            }
+        }, 300000); // Every 5 minutes
 
         // Initialize kagent bridge first with graceful fallback
         const kagentBridge = new KagentBridge(config.kagent);

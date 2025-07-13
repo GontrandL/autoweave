@@ -121,3 +121,22 @@ secrets/
 *.tgz
 *.tar.gz
 /tmp/
+
+# Monorepo specific
+packages/*/node_modules/
+packages/*/logs/
+packages/*/coverage/
+.turbo/
+
+# Migration artifacts
+CODEBASE_AUDIT_REPORT.json
+DIVERGED_FILES_COMPARISON.json
+archive/
+indexed_files_backup/
+autoweave-clean/
+package.json.backup
+package.json.workspace
+
+# Old structure (to be removed after migration)
+/src.old/
+/autoweave-repos.old/

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@2.3.1/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "autoweave/autoweave" }],
+  "commit": false,
+  "fixed": [],
+  "linked": [
+    ["@autoweave/core", "@autoweave/memory", "@autoweave/agents", "@autoweave/backend", "@autoweave/ui", "@autoweave/cli", "@autoweave/integrations"]
+  ],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
+}

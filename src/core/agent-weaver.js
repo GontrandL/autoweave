@@ -10,13 +10,24 @@ class AgentWeaver {
         this.config = config;
         this.logger = new Logger('AgentWeaver');
         
-        if (!config.openaiApiKey) {
-            throw new Error('OpenAI API key is required');
+        // Support multiple AI providers
+        if (config.openrouterApiKey) {
+            this.logger.info('Using OpenRouter API');
+            this.openai = new OpenAI({
+                apiKey: config.openrouterApiKey,
+                baseURL: 'https://openrouter.ai/api/v1',
+                defaultHeaders: {
+                    'HTTP-Referer': 'https://github.com/autoweave/autoweave',
+                    'X-Title': 'AutoWeave'
+                }
+            });
+        } else if (config.openaiApiKey) {
+            this.openai = new OpenAI({
+                apiKey: config.openaiApiKey
+            });
+        } else {
+            throw new Error('OpenAI or OpenRouter API key is required');
         }
-        
-        this.openai = new OpenAI({
-            apiKey: config.openaiApiKey
-        });
     }
 
     async initialize() {
@@ -48,6 +59,10 @@ class AgentWeaver {
     }
 
     async generateWorkflow(description) {
+        // Use appropriate model based on provider
+        const model = this.config.openrouterApiKey ? 
+            'openai/gpt-3.5-turbo' : // OpenRouter model that supports functions
+            this.config.model || 'gpt-4';
         this.logger.info(`Generating workflow from description: "${description}"`);
         
         // Validate input

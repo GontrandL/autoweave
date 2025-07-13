@@ -1,0 +1,16 @@
+Tu vas m'aider à déployer AutoWeave sur cette machine Ubuntu. AutoWeave est un orchestrateur d'agents IA modulaire publié sur GitHub.
+
+Repositories:
+- Deployment: https://github.com/GontrandL/autoweave-deployment
+- Main: https://github.com/GontrandL/autoweave
+
+Mission:
+1. Vérifier les prérequis (Node.js 18+, Python 3.8+, Docker, Git)
+2. Cloner autoweave-deployment
+3. Exécuter install.sh pour installer tout l'écosystème
+4. Configurer .env avec ma clé OpenAI
+5. Déployer l'infrastructure avec setup-memory-system.sh
+6. Lancer AutoWeave avec start-autoweave.sh
+7. Tester que tout fonctionne
+
+Utilise les TodoWrite pour tracker chaque étape. Commence par vérifier les prérequis système.

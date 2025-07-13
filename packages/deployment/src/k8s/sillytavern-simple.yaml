@@ -1,0 +1,87 @@
+# Simplified SillyTavern deployment for testing
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sillytavern-simple
+  namespace: autoweave-system
+  labels:
+    app: sillytavern-simple
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sillytavern-simple
+  template:
+    metadata:
+      labels:
+        app: sillytavern-simple
+    spec:
+      containers:
+      - name: sillytavern
+        image: sillytavern-autoweave:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: NODE_ENV
+          value: "development"
+        - name: SILLYTAVERN_WHITELIST
+          value: "false"
+        - name: SILLYTAVERN_BASICAUTH
+          value: "false"
+        command: ["/bin/sh"]
+        args: ["-c", "node server.js --listen --port 8000 --whitelist false --basicauth false"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000  
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sillytavern-simple-service
+  namespace: autoweave-system
+  labels:
+    app: sillytavern-simple
+spec:
+  selector:
+    app: sillytavern-simple
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

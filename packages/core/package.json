@@ -1,0 +1,32 @@
+{
+  "name": "@autoweave/core",
+  "version": "1.0.0",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "echo \"No build step\"",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@autoweave/shared": "file:../shared",
+    "@autoweave/integrations": "file:../integrations",
+    "@autoweave/backend": "file:../backend",
+    "@autoweave/memory": "file:../memory",
+    "@autoweave/agents": "file:../agents",
+    "openai": "^4.0.0",
+    "swagger-parser": "^10.0.3",
+    "ajv": "latest",
+    "express": "^4.18.2",
+    "ws": "^8.13.0",
+    "readable-stream": "latest",
+    "async/forEach": "latest",
+    "triple-beam": "latest",
+    "is-stream": "latest",
+    "winston-transport/legacy": "latest",
+    "logform/json": "latest"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.42.0"
+  }
+}

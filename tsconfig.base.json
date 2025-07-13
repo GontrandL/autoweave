@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "allowJs": true,
+    "checkJs": true,
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "paths": {
+      "@autoweave/core": ["./packages/core/src"],
+      "@autoweave/memory": ["./packages/memory/src"],
+      "@autoweave/agents": ["./packages/agents/src"],
+      "@autoweave/backend": ["./packages/backend/src"],
+      "@autoweave/ui": ["./packages/ui/src"],
+      "@autoweave/cli": ["./packages/cli/src"],
+      "@autoweave/integrations": ["./packages/integrations/src"],
+      "@autoweave/shared/*": ["./packages/shared/*/src"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".turbo",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
