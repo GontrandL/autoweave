@@ -2,11 +2,13 @@
   "name": "@autoweave/agents",
   "version": "1.0.0",
   "type": "module",
-  "main": "./src/index.js",
+  "main": "./dist/index.js",
   "scripts": {
     "test": "jest",
-    "build": "echo \"No build step\"",
-    "lint": "eslint src"
+    "build": "tsup",
+    "lint": "eslint src",
+    "dev": "tsup --watch",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@autoweave/shared": "file:../shared",
@@ -21,5 +23,18 @@
   "devDependencies": {
     "jest": "^29.5.0",
     "eslint": "^8.42.0"
-  }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ]
 }
