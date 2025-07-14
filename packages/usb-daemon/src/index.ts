@@ -11,8 +11,10 @@ export { USBDaemonMemoryManager } from './core/memory-manager';
 export { HealthCheckServer } from './monitoring/health-check';
 
 // Platform detection
-export { PlatformDetector, PlatformInfo } from './platform/platform-detection';
-export { EnhancedPlatformDetector, EnhancedPlatformInfo } from './platform/enhanced-platform';
+export { PlatformDetector } from './platform/platform-detection';
+export type { PlatformInfo } from './platform/platform-detection';
+export { EnhancedPlatformDetector } from './platform/enhanced-platform';
+export type { EnhancedPlatformInfo } from './platform/enhanced-platform';
 
 // Types
 export * from './types';
