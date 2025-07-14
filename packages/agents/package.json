@@ -14,7 +14,7 @@
     "node-fetch": "latest",
     "simple-git": "^3.19.0",
     "yaml": "^2.3.1",
-    "openai": "^4.0.0",
+    "openai": "^5.9.0",
     "prom-client": "latest",
     "axios": "^1.4.0"
   },
