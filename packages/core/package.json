@@ -19,11 +19,11 @@
     "express": "^4.18.2",
     "ws": "^8.13.0",
     "readable-stream": "latest",
-    "async/forEach": "latest",
+    "async": "^3.2.5",
     "triple-beam": "latest",
     "is-stream": "latest",
-    "winston-transport/legacy": "latest",
-    "logform/json": "latest"
+    "winston-transport": "^4.7.0",
+    "logform": "^2.6.0"
   },
   "devDependencies": {
     "jest": "^29.5.0",
