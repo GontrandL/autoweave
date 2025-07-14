@@ -3,7 +3,7 @@ import { metrics } from '@opentelemetry/api';
 // @ts-ignore
 import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 // @ts-ignore
-import { OTLPMetricExporter } from '@opentelemetry/exporter-otlp-http';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 // @ts-ignore
 import { Resource } from '@opentelemetry/resources';
 // @ts-ignore

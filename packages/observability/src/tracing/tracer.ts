@@ -7,7 +7,7 @@ import { Resource } from '@opentelemetry/resources';
 // @ts-ignore
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 // @ts-ignore
-import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-http';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 // @ts-ignore
 import { trace, context, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 // @ts-ignore

@@ -13,7 +13,8 @@ export default defineConfig({
     '@opentelemetry/auto-instrumentations-node',
     '@opentelemetry/resources',
     '@opentelemetry/semantic-conventions',
-    '@opentelemetry/exporter-otlp-http',
+    '@opentelemetry/exporter-trace-otlp-http',
+    '@opentelemetry/exporter-metrics-otlp-http',
     'winston'
   ],
   target: 'node18'
