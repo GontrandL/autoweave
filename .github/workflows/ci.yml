@@ -18,7 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: pnpm/action-setup@v2
+    - uses: pnpm/action-setup@v4
       with:
         version: 8.15.5
     
@@ -50,7 +50,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: pnpm/action-setup@v2
+    - uses: pnpm/action-setup@v4
       with:
         version: 8.15.5
     
@@ -100,7 +100,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: pnpm/action-setup@v2
+    - uses: pnpm/action-setup@v4
       with:
         version: 8.15.5
     
@@ -134,7 +134,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: pnpm/action-setup@v2
+    - uses: pnpm/action-setup@v4
       with:
         version: 8.15.5
     
