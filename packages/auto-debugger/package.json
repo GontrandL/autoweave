@@ -1,0 +1,71 @@
+{
+  "name": "@autoweave/auto-debugger",
+  "version": "1.0.0",
+  "description": "Automatic debugging system with Playwright MCP integration for AutoWeave",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "docker:build": "docker build -f docker/Dockerfile -t autoweave-debugger .",
+    "docker:run": "docker-compose -f docker/docker-compose.yml up"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "@autoweave/core": "workspace:*",
+    "@autoweave/observability": "workspace:*",
+    "@autoweave/agents": "workspace:*",
+    "playwright": "^1.40.0",
+    "playwright-core": "^1.40.0",
+    "ws": "^8.18.1",
+    "json-rpc-2.0": "^1.6.0",
+    "p-queue": "^7.3.0",
+    "eventemitter3": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.7",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.6.3",
+    "tsup": "^8.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.0",
+    "@types/jest": "^30.0.0"
+  },
+  "files": [
+    "dist",
+    "docker",
+    "scripts",
+    "prompts",
+    "README.md"
+  ],
+  "keywords": [
+    "debugging",
+    "playwright",
+    "mcp",
+    "automation",
+    "autoweave",
+    "browser",
+    "testing"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autoweave/autoweave.git",
+    "directory": "packages/auto-debugger"
+  }
+}

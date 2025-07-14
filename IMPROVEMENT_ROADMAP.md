@@ -68,6 +68,12 @@ AutoWeave constitue déjà une plateforme d'orchestration d'agents très complè
 - [ ] Implémenter circuit-breaker pour LLM
 - [ ] Ajouter métriques custom (agent creation time, memory latency)
 - [ ] Configurer alerting Prometheus
+- [x] Implémenter système de débogage automatique avec Playwright MCP
+  - [x] AutoDebugger pour capture d'erreurs browser
+  - [x] Serveur MCP pour automatisation
+  - [x] Intégration avec agents AutoWeave
+  - [ ] Tests E2E complets
+  - [ ] Déploiement production
 
 ### 6. Helm Chart Unifié
 **Objectif**: Installation one-click

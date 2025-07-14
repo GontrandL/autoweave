@@ -87,6 +87,12 @@
 
 ### Specialized Agents
 - ✅ Debugging agent with OpenTelemetry
+- 🔄 Auto-debugger with Playwright MCP integration
+  - ✅ Create package structure and core AutoDebugger class
+  - ✅ Implement Playwright MCP server
+  - ✅ Create AutoWeave integration bridge
+  - 📋 Add comprehensive tests
+  - 📋 Deploy to production
 - 📋 Security scanning agent
 - 📋 Performance optimization agent
 - 📋 Cost analysis agent

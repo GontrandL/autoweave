@@ -16,6 +16,7 @@
   "dependencies": {
     "@autoweave/shared": "file:../shared",
     "@autoweave/core": "file:../core",
+    "@autoweave/auto-debugger": "file:../auto-debugger",
     "node-fetch": "latest",
     "simple-git": "^3.19.0",
     "yaml": "^2.3.1",
