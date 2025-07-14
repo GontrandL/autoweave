@@ -2,13 +2,7 @@ import { AgentWeaver } from './agent-weaver';
 import { ConfigurationIntelligence } from './config-intelligence';
 import { Request, Response, NextFunction } from 'express';
 import WebSocket from 'ws';
-import { AutoWeaveConfig, KagentBridge, HealthStatus, DetailedHealth, ReadinessStatus, Metrics, AGUIEvent, AGUIInputEvent } from './types';
-
-// Import types from ambient modules
-import { HybridMemoryManager } from '@autoweave/memory';
-// import { MCPServer } from '@autoweave/integrations';
-import { DebuggingAgent } from '@autoweave/agents';
-import { services } from '@autoweave/backend';
+import { AutoWeaveConfig, KagentBridge, HealthStatus, DetailedHealth, ReadinessStatus, Metrics, AGUIEvent, AGUIInputEvent, MemoryManager, AgentInterface, ServiceInterface } from './types';
 
 import { Logger } from './logger';
 
@@ -21,13 +15,13 @@ export class AutoWeave {
     private kagentBridge?: KagentBridge;
     private logger: any;
     private agentWeaver: AgentWeaver;
-    private memoryManager: HybridMemoryManager;
-    private agentService?: services.AgentService;
+    private memoryManager?: MemoryManager;
+    private agentService?: ServiceInterface;
     // private server?: any;
     private isInitialized: boolean = false;
     // private mcpServer?: any;
     private configIntelligence?: ConfigurationIntelligence;
-    private debuggingAgent?: DebuggingAgent;
+    private debuggingAgent?: AgentInterface;
     private aguiClients: Map<string, WebSocket>;
     // private uiAgent?: any;
 
@@ -42,7 +36,7 @@ export class AutoWeave {
             logger: this.logger
         });
         
-        this.memoryManager = config.memoryManager || new HybridMemoryManager();
+        this.memoryManager = config.memoryManager;
 
         // AG-UI WebSocket clients
         this.aguiClients = new Map();
@@ -53,7 +47,9 @@ export class AutoWeave {
             this.logger.info('Initializing AutoWeave services...');
             
             // Initialize memory manager
-            await this.memoryManager.health();
+            if (this.memoryManager) {
+                await this.memoryManager.health();
+            }
             
             // Initialize configuration intelligence after core components
             this.configIntelligence = this.config.configIntelligence || new ConfigurationIntelligence({
@@ -61,11 +57,8 @@ export class AutoWeave {
                 openaiApiKey: process.env.OPENAI_API_KEY
             });
             
-            // Initialize debugging agent
-            this.debuggingAgent = new DebuggingAgent({
-                logger: this.logger,
-                memoryManager: this.memoryManager
-            });
+            // Initialize debugging agent (injected via config)
+            this.debuggingAgent = this.config.debuggingAgent;
             
             // Initialize MCP server
             if (this.config.port) {
@@ -75,8 +68,8 @@ export class AutoWeave {
                 // });
             }
             
-            // Initialize agent service
-            this.agentService = new services.AgentService();
+            // Initialize agent service (injected via config)
+            this.agentService = this.config.agentService;
             
             this.isInitialized = true;
             this.logger.info('AutoWeave services initialized successfully');
@@ -148,11 +141,13 @@ export class AutoWeave {
         }
 
         // Check memory
-        try {
-            const memoryHealth = await this.memoryManager.health();
-            health.memory = memoryHealth.healthy;
-        } catch {
-            health.memory = false;
+        if (this.memoryManager) {
+            try {
+                const memoryHealth = await this.memoryManager.health();
+                health.memory = memoryHealth.healthy;
+            } catch {
+                health.memory = false;
+            }
         }
 
         return health;
@@ -202,18 +197,26 @@ export class AutoWeave {
 
         // Check memory
         const memoryStart = Date.now();
-        try {
-            const memoryHealth = await this.memoryManager.health();
-            health.components.memory = {
-                status: memoryHealth.healthy ? 'healthy' : 'unhealthy',
-                message: memoryHealth.healthy ? 'All memory systems operational' : 'Memory system degraded',
-                latency: Date.now() - memoryStart,
-                details: memoryHealth.details
-            };
-        } catch (error: any) {
+        if (this.memoryManager) {
+            try {
+                const memoryHealth = await this.memoryManager.health();
+                health.components.memory = {
+                    status: memoryHealth.healthy ? 'healthy' : 'unhealthy',
+                    message: memoryHealth.healthy ? 'All memory systems operational' : 'Memory system degraded',
+                    latency: Date.now() - memoryStart,
+                    details: memoryHealth.details
+                };
+            } catch (error: any) {
+                health.components.memory = {
+                    status: 'unhealthy',
+                    message: error.message || 'Connection failed',
+                    latency: Date.now() - memoryStart
+                };
+            }
+        } else {
             health.components.memory = {
                 status: 'unhealthy',
-                message: error.message || 'Connection failed',
+                message: 'Memory manager not configured',
                 latency: Date.now() - memoryStart
             };
         }
@@ -250,10 +253,14 @@ export class AutoWeave {
             }
         }
 
-        try {
-            const memoryHealth = await this.memoryManager.health();
-            readiness.services.memory = memoryHealth.healthy;
-        } catch {
+        if (this.memoryManager) {
+            try {
+                const memoryHealth = await this.memoryManager.health();
+                readiness.services.memory = memoryHealth.healthy;
+            } catch {
+                readiness.services.memory = false;
+            }
+        } else {
             readiness.services.memory = false;
         }
 
@@ -374,7 +381,7 @@ export class AutoWeave {
         return this.agentWeaver;
     }
 
-    getMemoryManager(): HybridMemoryManager {
+    getMemoryManager(): MemoryManager | undefined {
         return this.memoryManager;
     }
 
@@ -382,7 +389,7 @@ export class AutoWeave {
         return this.configIntelligence;
     }
 
-    getDebuggingAgent(): DebuggingAgent | undefined {
+    getDebuggingAgent(): AgentInterface | undefined {
         return this.debuggingAgent;
     }
 

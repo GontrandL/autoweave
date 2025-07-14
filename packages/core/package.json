@@ -4,16 +4,15 @@
   "main": "./dist/index.js",
   "scripts": {
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --watchAll=false",
     "build": "tsup",
     "lint": "eslint src",
     "dev": "tsup --watch",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@autoweave/agents": "file:../agents",
-    "@autoweave/backend": "file:../backend",
-    "@autoweave/integrations": "file:../integrations",
-    "@autoweave/memory": "file:../memory",
     "@autoweave/shared": "file:../shared",
     "ajv": "latest",
     "async": "^3.2.5",

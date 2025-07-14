@@ -1,0 +1,56 @@
+{
+  "name": "@autoweave/usb-daemon",
+  "version": "1.0.0",
+  "description": "AutoWeave USB hot-plug daemon with libusb callbacks and Redis Streams",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "usb": "^2.11.0",
+    "ioredis": "^5.3.2",
+    "@opentelemetry/api": "^1.6.0",
+    "@opentelemetry/sdk-node": "^0.44.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.7",
+    "@types/usb": "^2.0.0",
+    "typescript": "^5.6.3"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "udev"
+  ],
+  "keywords": [
+    "usb",
+    "daemon",
+    "hot-plug",
+    "libusb",
+    "autoweave"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autoweave/autoweave.git",
+    "directory": "packages/usb-daemon"
+  }
+}

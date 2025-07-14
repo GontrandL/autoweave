@@ -6,10 +6,12 @@
 export interface AutoWeaveConfig {
   port?: number;
   kagentBridge?: KagentBridge;
-  memoryManager?: any;
+  memoryManager?: MemoryManager;
   logger?: any;
   agentWeaver?: any;
   configIntelligence?: any;
+  debuggingAgent?: AgentInterface;
+  agentService?: ServiceInterface;
 }
 
 export interface KagentBridge {
@@ -152,6 +154,23 @@ export interface ProcessMessageOptions {
 export interface MemoryManager {
   search(query: string, filters?: any): Promise<any[]>;
   add(data: any): Promise<void>;
+  health(): Promise<HealthCheck>;
+}
+
+export interface HealthCheck {
+  healthy: boolean;
+  details?: any;
+}
+
+export interface AgentInterface {
+  initialize(): Promise<void>;
+  process(input: any): Promise<any>;
+}
+
+export interface ServiceInterface {
+  listAgents(): Promise<any[]>;
+  createAgent(config: any): Promise<any>;
+  updateAgent(id: string, config: any): Promise<any>;
 }
 
 export interface OpenAPISpec {

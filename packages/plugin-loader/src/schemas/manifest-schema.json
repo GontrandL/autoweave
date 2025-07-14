@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AutoWeave Plugin Manifest",
+  "type": "object",
+  "required": ["name", "version", "entry", "permissions", "hooks"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "minLength": 3,
+      "maxLength": 50,
+      "description": "Nom unique du plugin (kebab-case)"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9-]+)?$",
+      "description": "Version sémantique du plugin"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Description courte du plugin"
+    },
+    "author": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "url": { "type": "string", "format": "uri" }
+      },
+      "required": ["name"]
+    },
+    "entry": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9-_/]+\\.(js|ts|mjs)$",
+      "description": "Point d'entrée principal du plugin"
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "filesystem": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": { "type": "string" },
+              "mode": { "enum": ["read", "write", "readwrite"] }
+            },
+            "required": ["path", "mode"]
+          }
+        },
+        "network": {
+          "type": "object",
+          "properties": {
+            "outbound": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "inbound": {
+              "type": "object",
+              "properties": {
+                "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+                "interface": { "enum": ["localhost", "all"] }
+              }
+            }
+          }
+        },
+        "usb": {
+          "type": "object",
+          "properties": {
+            "vendor_ids": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^0x[0-9a-fA-F]{4}$" }
+            },
+            "product_ids": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^0x[0-9a-fA-F]{4}$" }
+            }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "max_heap_mb": { "type": "integer", "minimum": 10, "maximum": 1024 },
+            "max_workers": { "type": "integer", "minimum": 1, "maximum": 8 }
+          }
+        },
+        "queue": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "description": "Noms des queues BullMQ autorisées"
+        }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "onLoad": {
+          "type": "string",
+          "description": "Fonction appelée au chargement du plugin"
+        },
+        "onUnload": {
+          "type": "string",
+          "description": "Fonction appelée au déchargement du plugin"
+        },
+        "onUSBAttach": {
+          "type": "string",
+          "description": "Fonction appelée lors de l'attachement USB"
+        },
+        "onUSBDetach": {
+          "type": "string",
+          "description": "Fonction appelée lors du détachement USB"
+        },
+        "onJobReceived": {
+          "type": "string",
+          "description": "Fonction appelée à la réception d'un job BullMQ"
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "properties": {
+        "autoweave": {
+          "type": "string",
+          "description": "Version compatible d'AutoWeave"
+        },
+        "node": {
+          "type": "string",
+          "description": "Version Node.js requise"
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "properties": {
+        "algorithm": { "enum": ["SHA-256"] },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "signer": { "type": "string" }
+      },
+      "required": ["algorithm", "value"]
+    }
+  }
+}

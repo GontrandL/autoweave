@@ -1,0 +1,51 @@
+{
+  "name": "@autoweave/queue",
+  "version": "1.0.0",
+  "description": "AutoWeave job queue with BullMQ and Redis Streams",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "bullmq": "^4.15.1",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.7",
+    "typescript": "^5.6.3"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "queue",
+    "bullmq",
+    "redis",
+    "jobs",
+    "autoweave"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autoweave/autoweave.git",
+    "directory": "packages/queue"
+  }
+}
