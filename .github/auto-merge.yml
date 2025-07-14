@@ -1,0 +1,58 @@
+# Configuration for auto-merge behavior
+# This file defines rules for automatic merging of Dependabot PRs
+
+# Merge rules for different update types
+merge_rules:
+  # Always auto-merge patch updates
+  - match:
+      update_type: "patch"
+      dependency_type: "all"
+    merge_method: "merge"
+    
+  # Auto-merge minor updates for development dependencies
+  - match:
+      update_type: "minor"
+      dependency_type: "development"
+    merge_method: "merge"
+    
+  # Auto-merge GitHub Actions updates (usually safe)
+  - match:
+      package_ecosystem: "github-actions"
+      update_type: ["patch", "minor"]
+    merge_method: "merge"
+    
+  # Never auto-merge major updates
+  - match:
+      update_type: "major"
+    merge_method: "manual"
+    
+# Security updates should be prioritized but reviewed
+security:
+  auto_merge: false
+  priority_label: "security-update"
+  
+# Additional safety checks
+safety_checks:
+  # Require CI to pass
+  require_ci_pass: true
+  
+  # Require specific status checks
+  required_status_checks:
+    - "Build and Test (18.x)"
+    - "Build and Test (20.x)"
+    - "Security Scan"
+    
+  # Wait time before auto-merge (in minutes)
+  merge_delay: 5
+  
+# Excluded packages that should never be auto-merged
+excluded_packages:
+  - "typescript"  # Major TypeScript updates can break builds
+  - "jest"        # Test framework updates need careful review
+  - "turbo"       # Build system updates need testing
+  - "@types/*"    # Type definition updates can cause issues
+  
+# Special handling for monorepo packages
+monorepo_packages:
+  "@autoweave/*":
+    auto_merge: false  # Internal packages should be manually reviewed
