@@ -1,0 +1,125 @@
+# GraphQL Code Generator Configuration for AutoWeave
+# Generates type-safe hooks and types from GraphQL schemas
+
+# Define multiple schemas for AutoWeave's distributed GraphQL architecture
+schema:
+  # Main GraphQL Gateway (WunderGraph Cosmo)
+  - "http://localhost:4000/graphql"
+  # Local schema files for development
+  - "src/schemas/*.graphql"
+
+# Input documents (queries, mutations, subscriptions)
+documents:
+  - "src/**/*.graphql"
+  - "src/**/*.gql"
+  - "../../apps/**/src/**/*.graphql"
+  - "../../apps/**/src/**/*.gql"
+
+# Output configuration
+generates:
+  # Core GraphQL types
+  src/generated/types.ts:
+    plugins:
+      - "typescript"
+      - "typescript-operations"
+    config:
+      # Type-safe configuration
+      scalars:
+        DateTime: "string"
+        JSON: "any"
+        Upload: "File"
+      # Better typing for AutoWeave entities
+      namingConvention:
+        typeNames: "pascal-case#pascalCase"
+        enumValues: "upper-case#upperCase"
+      # Strict mode for production
+      strictScalars: true
+      # Add utility types
+      maybeValue: "T | null | undefined"
+
+  # React Apollo hooks for UI apps
+  src/generated/apollo.tsx:
+    plugins:
+      - "typescript"
+      - "typescript-operations"
+      - "typescript-react-apollo"
+    config:
+      # React-specific configuration
+      withHooks: true
+      withHOC: false
+      withComponent: false
+      withMutationFn: true
+      withSubscriptionHooks: true
+      # AutoWeave-specific Apollo client
+      apolloReactCommonImportFrom: "@apollo/client"
+      apolloReactHooksImportFrom: "@apollo/client"
+      # Custom hook names for AutoWeave patterns
+      documentVariablePrefix: ""
+      documentVariableSuffix: "Document"
+      fragmentVariablePrefix: ""
+      fragmentVariableSuffix: "Fragment"
+      # Better naming for AutoWeave components
+      namingConvention:
+        typeNames: "pascal-case#pascalCase"
+        enumValues: "upper-case#upperCase"
+
+  # Schema introspection for development tools
+  src/generated/introspection.json:
+    plugins:
+      - "introspection"
+    config:
+      minify: true
+
+  # Resolvers types for backend development
+  src/generated/resolvers.ts:
+    plugins:
+      - "typescript"
+      - "typescript-resolvers"
+    config:
+      # Backend resolver configuration
+      contextType: "../context#GraphQLContext"
+      # AutoWeave entity mappings
+      mappers:
+        Agent: "../models#AgentModel"
+        User: "../models#UserModel"
+        Plugin: "../models#PluginModel"
+        Memory: "../models#MemoryModel"
+        Queue: "../models#QueueModel"
+      # Strict resolver typing
+      strictScalars: true
+      # Federation support for WunderGraph Cosmo
+      federation: true
+
+# Plugin configuration
+config:
+  # Global configuration for all plugins
+  skipTypename: false
+  
+  # Optimize for AutoWeave patterns
+  dedupeOperationSuffix: true
+  omitOperationSuffix: false
+  
+  # Better imports for monorepo
+  importOperationTypesFrom: "Types"
+  exportFragmentSpreadSubTypes: true
+  
+  # Production optimizations
+  inlineFragmentTypes: "combine"
+  preResolveTypes: true
+
+# Watch mode for development
+watch: true
+
+# Hooks for integration with AutoWeave build system
+hooks:
+  afterOneFileWrite:
+    - "eslint --fix"
+  afterAllFileWrite:
+    - "prettier --write src/generated/**/*.{ts,tsx}"
+
+# Error handling
+onError: "throw"
+
+# Require configuration for better error messages
+require:
+  - "ts-node/register"

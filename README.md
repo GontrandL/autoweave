@@ -44,6 +44,14 @@ AutoWeave handles the complexity—you focus on the vision.
 - **GraphQL Federation**: WunderGraph Cosmo with JWT authentication
 - **Multi-UI System**: Admin, Dev Studio, and User interfaces
 
+### 🎨 Modern UI Ecosystem (LATEST!)
+- **shadcn/ui Integration**: CLI-powered component generation with 15+ components
+- **GraphQL Codegen**: Type-safe hooks with automatic code generation
+- **Storybook Documentation**: Interactive component playground with visual testing
+- **Theme System**: Comprehensive dark/light mode with AutoWeave branding
+- **v0 by Vercel Ready**: AI-powered UI generation integration planned
+- **Responsive Design**: Mobile-first approach with accessibility compliance
+
 ### 📊 Production Observability (NEW!)
 - **OpenTelemetry**: Distributed tracing with <1% overhead
 - **Grafana Stack**: Tempo, Loki, Prometheus integration
@@ -290,6 +298,29 @@ npx autoweave integrate-github https://github.com/user/repo/.github/workflows/ci
 
 # Create an agent from Helm chart
 npx autoweave integrate-helm https://charts.bitnami.com/bitnami/postgresql
+```
+
+### UI Development (NEW!)
+
+```bash
+# UI Component Development
+cd packages/ui
+
+# Start Storybook for component development
+pnpm run storybook
+# Open http://localhost:6006
+
+# Generate new components with shadcn/ui
+pnpm run ui:add button
+pnpm run ui:add form
+
+# GraphQL development with type-safe hooks
+cd packages/graphql
+pnpm run codegen        # Generate types and hooks
+pnpm run codegen:watch  # Watch mode for development
+
+# Build UI package
+pnpm run build
 ```
 
 ### Available Interfaces

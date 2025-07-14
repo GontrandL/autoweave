@@ -6,11 +6,14 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --external react",
+    "build": "pnpm run codegen && tsup src/index.ts --format cjs,esm --dts --external react",
     "dev": "tsup src/index.ts --format cjs,esm --dts --external react --watch",
     "codegen": "graphql-codegen --config codegen.yml",
+    "codegen:watch": "graphql-codegen --config codegen.yml --watch",
+    "codegen:check": "graphql-codegen --config codegen.yml --check",
     "lint": "eslint \"src/**/*.ts\"",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist src/generated",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@apollo/client": "^3.8.0",
@@ -20,12 +23,17 @@
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/introspection": "^4.0.0",
     "@graphql-codegen/typescript": "^4.0.0",
     "@graphql-codegen/typescript-operations": "^4.0.0",
     "@graphql-codegen/typescript-react-apollo": "^4.0.0",
+    "@graphql-codegen/typescript-resolvers": "^4.0.0",
     "@types/react": "^18.2.0",
     "eslint": "^8.0.0",
+    "graphql-request": "^6.1.0",
+    "prettier": "^3.2.5",
     "rimraf": "^5.0.5",
+    "ts-node": "^10.9.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
   },
