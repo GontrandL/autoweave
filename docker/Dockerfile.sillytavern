@@ -1,0 +1,91 @@
+# AutoWeave SillyTavern Docker Image
+# Optimized for Kind cluster deployment
+
+FROM node:20-alpine
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S sillytavern && \
+    adduser -S sillytavern -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy application source
+COPY . .
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Create init script to configure SillyTavern for Kubernetes
+RUN cat > /app/init-sillytavern.sh << 'EOF'
+#!/bin/sh
+
+# Create basic config if it doesn't exist
+cat > config.yaml << 'YAML'
+# SillyTavern Configuration for AutoWeave Integration
+port: 8000
+listen: "0.0.0.0"
+whitelistMode: false
+basicAuthMode: false
+enableExtensions: true
+enableCorsProxy: true
+autorun: false
+csrf: false
+enableServerPlugins: false
+enableTtsExtensions: false
+securityOverride: true
+YAML
+
+# Create default settings
+mkdir -p public/settings
+cat > public/settings/settings.json << 'JSON'
+{
+  "api_server": "",
+  "api_key_openai": "",
+  "openai_model": "gpt-3.5-turbo",
+  "claude_model": "claude-3-haiku-20240307",
+  "windowai_model": "",
+  "openrouter_model": "meta-llama/llama-2-13b-chat",
+  "openrouter_use_fallback": false,
+  "openrouter_force_instruct": false,
+  "openrouter_group_models": false,
+  "openrouter_sort_models": "alphabetically",
+  "ai21_model": "j2-ultra",
+  "anthropic_model": "claude-v1",
+  "claude_use_sysprompt": true,
+  "claude_exclude_prefixes": false,
+  "exclude_assistant": false,
+  "claude_assistant_prefill": "",
+  "use_ai21_tokenizer": false,
+  "use_google_tokenizer": false,
+  "exclude_assistant_suffix": false,
+  "enable_cors": true
+}
+JSON
+
+echo "SillyTavern configuration complete"
+echo "Starting SillyTavern server on port 8000..."
+
+# Start SillyTavern with basic config
+exec node server.js --listen --port 8000 --autorun false
+EOF
+
+# Create necessary directories and set permissions
+RUN mkdir -p "public/User Data" data public/settings public/extensions && \
+    chmod +x /app/init-sillytavern.sh && \
+    chown -R sillytavern:sillytavern /app
+
+# Switch to non-root user
+USER sillytavern
+
+# Expose port 8000
+EXPOSE 8000
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start SillyTavern with init script
+CMD ["./init-sillytavern.sh"]

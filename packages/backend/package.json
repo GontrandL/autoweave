@@ -1,0 +1,25 @@
+{
+  "name": "@autoweave/backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "build": "echo \"No build step\"",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@autoweave/shared": "file:../shared",
+    "@autoweave/agents": "file:../agents",
+    "@autoweave/memory": "file:../memory",
+    "@autoweave/core": "file:../core",
+    "express": "^4.18.2",
+    "node-fetch": "latest"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.42.0"
+  }
+}

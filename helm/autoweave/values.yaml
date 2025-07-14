@@ -1,0 +1,265 @@
+# Default values for autoweave.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+  
+# Core AutoWeave configuration
+core:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: autoweave/core
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    annotations: {}
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: autoweave.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: autoweave-tls
+        hosts:
+          - autoweave.local
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: info
+    
+  secrets:
+    openaiApiKey: ""  # Required: OpenAI API key
+
+# Memory system configuration
+memory:
+  enabled: true
+  
+  qdrant:
+    enabled: true
+    image:
+      repository: qdrant/qdrant
+      tag: "v1.7.4"
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  
+  memgraph:
+    enabled: true
+    image:
+      repository: memgraph/memgraph
+      tag: "2.14.0"
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+  
+  mem0:
+    enabled: true
+    image:
+      repository: autoweave/mem0-bridge
+      tag: "1.0.0"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+# Backend services
+backend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: autoweave/backend
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# UI services
+ui:
+  enabled: true
+  
+  chatui:
+    enabled: true
+    image:
+      repository: autoweave/chatui
+      tag: "1.0.0"
+    ingress:
+      enabled: true
+      host: chat.autoweave.local
+  
+  sillytavern:
+    enabled: true
+    image:
+      repository: sillytavern/sillytavern
+      tag: "latest"
+    ingress:
+      enabled: true
+      host: tavern.autoweave.local
+  
+  appsmith:
+    enabled: true
+    ingress:
+      enabled: true
+      host: dashboard.autoweave.local
+
+# Agent configuration
+agents:
+  enabled: true
+  namespace: autoweave-agents
+  
+  debugging:
+    enabled: true
+    replicas: 1
+  
+  integration:
+    enabled: true
+    replicas: 1
+  
+  selfAwareness:
+    enabled: true
+    replicas: 1
+
+# Integration services
+integrations:
+  enabled: true
+  
+  anp:
+    enabled: true
+    port: 8083
+  
+  mcp:
+    enabled: true
+    port: 3002
+  
+  kagent:
+    enabled: true
+    namespace: kagent-system
+
+# External dependencies
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""  # Generated if empty
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 8Gi
+
+postgresql:
+  enabled: false
+  auth:
+    postgresPassword: ""  # Generated if empty
+    database: autoweave
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Monitoring stack
+monitoring:
+  enabled: true
+  
+  prometheus:
+    enabled: true
+    alertmanager:
+      enabled: true
+    pushgateway:
+      enabled: false
+    nodeExporter:
+      enabled: true
+    kubeStateMetrics:
+      enabled: true
+  
+  grafana:
+    enabled: true
+    adminPassword: ""  # Generated if empty
+    ingress:
+      enabled: true
+      hosts:
+        - monitoring.autoweave.local
+    dashboardProviders:
+      dashboardproviders.yaml:
+        apiVersion: 1
+        providers:
+        - name: 'autoweave'
+          orgId: 1
+          folder: 'AutoWeave'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/autoweave
+
+# Security settings
+security:
+  podSecurityPolicy:
+    enabled: false
+  networkPolicy:
+    enabled: true
+  rbac:
+    create: true
+    
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Node affinity
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Service mesh integration
+serviceMesh:
+  enabled: false
+  provider: istio  # istio or linkerd

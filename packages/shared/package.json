@@ -1,0 +1,25 @@
+{
+  "name": "@autoweave/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "echo \"No build step\"",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "chalk": "^5.2.0",
+    "@sentry/node": "latest"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.42.0"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./mock-config": "./src/mock-config.js",
+    "./env-validator": "./src/env-validator.js",
+    "./test-utils": "./src/test-utils.js"
+  }
+}

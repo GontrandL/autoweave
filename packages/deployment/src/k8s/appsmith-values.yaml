@@ -1,0 +1,176 @@
+# AutoWeave Appsmith Integration Configuration
+# Optimized for Kind cluster deployment
+
+# Basic configuration
+replicaCount: 1
+host: appsmith.local
+
+# Image configuration
+image:
+  repository: appsmith/appsmith-ce
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Resource limits for Kind cluster
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# MongoDB configuration (internal for dev)
+mongodb:
+  enabled: true
+  architecture: replicaset
+  replicaCount: 1
+  auth:
+    enabled: true
+    rootPassword: password
+    username: root
+    password: password
+    database: appsmith
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 5Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Redis configuration (internal for dev)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      storageClass: standard
+      size: 1Gi
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Ingress configuration for local access
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: appsmith.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Appsmith application configuration
+appsmith:
+  config:
+    # Disable signup for security
+    APPSMITH_SIGNUP_DISABLED: "false"
+    
+    # Admin configuration
+    APPSMITH_ADMIN_EMAILS: "admin@autoweave.dev"
+    
+    # Security settings
+    APPSMITH_DISABLE_TELEMETRY: "true"
+    APPSMITH_INSTANCE_NAME: "AutoWeave Management"
+    
+    # Performance settings
+    APPSMITH_SUPERVISOR_GLOBAL_TIMEOUT: "60"
+    APPSMITH_SERVER_TIMEOUT: "60"
+    
+    # Database settings (will use internal MongoDB)
+    APPSMITH_DB_URL: ""
+    APPSMITH_REDIS_URL: ""
+    
+    # Mail configuration (optional)
+    APPSMITH_MAIL_ENABLED: "false"
+    
+    # OAuth configuration (optional)
+    APPSMITH_OAUTH2_GITHUB_CLIENT_ID: ""
+    APPSMITH_OAUTH2_GITHUB_CLIENT_SECRET: ""
+    
+    # Custom branding
+    APPSMITH_BRAND_COLORS_PRIMARY_COLOR: "#2196F3"
+    APPSMITH_BRAND_COLORS_BACKGROUND_COLOR: "#F8F9FA"
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClass: standard
+  size: 10Gi
+  accessMode: ReadWriteOnce
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1000
+
+# Node selector for Kind
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Startup probe
+startupProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# Liveness probe
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Environment variables for AutoWeave integration
+env:
+  - name: APPSMITH_INSTANCE_NAME
+    value: "AutoWeave Management Console"
+  - name: APPSMITH_CUSTOM_DOMAIN
+    value: "appsmith.local"

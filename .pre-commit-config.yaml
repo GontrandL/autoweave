@@ -1,0 +1,36 @@
+# Pre-commit security configuration
+repos:
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: main
+    hooks:
+      - id: trufflehog
+        name: TruffleHog
+        description: Detect secrets in your data.
+        entry: bash -c 'trufflehog git file://. --since-commit HEAD --only-verified --fail'
+        language: system
+        stages: ["commit", "push"]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-json
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: npm-audit
+        name: npm audit
+        entry: npm audit --audit-level=high
+        language: system
+        pass_filenames: false
+        stages: ["push"]
+        
+      - id: check-env-files
+        name: Check for .env files
+        entry: bash -c 'if find . -name "*.env" -not -path "./node_modules/*" | grep -q .; then echo "Error: .env files found in commit"; exit 1; fi'
+        language: system
+        pass_filenames: false

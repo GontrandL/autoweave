@@ -1,0 +1,25 @@
+{
+  "name": "@autoweave/agents",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "echo \"No build step\"",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@autoweave/shared": "file:../shared",
+    "@autoweave/core": "file:../core",
+    "node-fetch": "latest",
+    "simple-git": "^3.19.0",
+    "yaml": "^2.3.1",
+    "openai": "^4.0.0",
+    "prom-client": "latest",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.42.0"
+  }
+}

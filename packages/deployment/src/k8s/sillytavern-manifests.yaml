@@ -1,0 +1,118 @@
+# AutoWeave SillyTavern Kubernetes Manifests
+# Deployment configuration for SillyTavern in Kind cluster
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sillytavern
+  namespace: autoweave-system
+  labels:
+    app: sillytavern
+    component: ui
+    part-of: autoweave
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sillytavern
+  template:
+    metadata:
+      labels:
+        app: sillytavern
+        component: ui
+        part-of: autoweave
+    spec:
+      containers:
+      - name: sillytavern
+        image: sillytavern-autoweave:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: NODE_ENV
+          value: production
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sillytavern-service
+  namespace: autoweave-system
+  labels:
+    app: sillytavern
+    component: ui
+    part-of: autoweave
+spec:
+  selector:
+    app: sillytavern
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+
+---
+# Optional: ConfigMap for SillyTavern configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sillytavern-config
+  namespace: autoweave-system
+  labels:
+    app: sillytavern
+    component: config
+    part-of: autoweave
+data:
+  config.yaml: |
+    # SillyTavern Configuration for AutoWeave Integration
+    port: 8000
+    listen: "0.0.0.0"
+    whitelistMode: false
+    basicAuthMode: false
+    enableExtensions: true
+    enableCorsProxy: true
+    autorun: false
+    csrf: false
+    
+    # CORS settings for AutoWeave integration
+    cors:
+      credentials: true
+      origin: "*"

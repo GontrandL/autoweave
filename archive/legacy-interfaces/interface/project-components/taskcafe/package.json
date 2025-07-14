@@ -1,0 +1,44 @@
+{
+  "name": "autoweave-taskcafe-bridge",
+  "version": "1.0.0",
+  "description": "Bridge service connecting AutoWeave with Taskcafe for project management",
+  "main": "autoweave-taskcafe-bridge.js",
+  "scripts": {
+    "start": "node autoweave-taskcafe-bridge.js",
+    "dev": "nodemon autoweave-taskcafe-bridge.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "ws": "^8.14.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "eslint": "^8.52.0",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "autoweave",
+    "taskcafe",
+    "bridge",
+    "project-management",
+    "task-management",
+    "kubernetes"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/autoweave/interface"
+  }
+}

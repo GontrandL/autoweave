@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoWeave Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .chat-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .message-user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .message-assistant {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .send-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .agent-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        .agent-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { background: #10b981; }
+        .status-inactive { background: #ef4444; }
+        .status-processing { background: #f59e0b; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-white mb-2">🚀 AutoWeave Interface</h1>
+                <p class="text-xl text-white opacity-90">Interface de Gestion de Projets IA</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Chat Interface -->
+                <div class="lg:col-span-2">
+                    <div class="chat-container p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800">💬 Chat AutoWeave</h2>
+                            <div class="flex items-center">
+                                <span class="status-dot status-active"></span>
+                                <span class="text-sm text-gray-600" id="status">Connecté</span>
+                            </div>
+                        </div>
+
+                        <!-- Messages Container -->
+                        <div id="messages" class="h-96 overflow-y-auto mb-4 p-4 border rounded-lg bg-gray-50">
+                            <div class="message-assistant p-3 rounded-lg mb-3 inline-block">
+                                <strong>🤖 AutoWeave:</strong> Bonjour ! Je suis votre assistant pour la gestion de projets IA. Comment puis-je vous aider ?
+                            </div>
+                        </div>
+
+                        <!-- Input Container -->
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                id="messageInput" 
+                                placeholder="Tapez votre message..." 
+                                class="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onkeypress="handleKeyPress(event)"
+                            />
+                            <button 
+                                onclick="sendMessage()" 
+                                class="send-button px-6 py-3 text-white rounded-lg font-medium"
+                            >
+                                📤 Envoyer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel -->
+                <div class="space-y-6">
+                    <!-- Agent Management -->
+                    <div class="chat-container p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">🤖 Agents AutoWeave</h3>
+                        
+                        <div class="space-y-3" id="agentsList">
+                            <!-- Agents will be populated here -->
+                        </div>
+
+                        <button 
+                            onclick="createAgent()" 
+                            class="w-full mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        >
+                            ➕ Créer un Agent
+                        </button>
+                    </div>
+
+                    <!-- Services Status -->
+                    <div class="chat-container p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📊 Services</h3>
+                        
+                        <div class="space-y-3" id="servicesList">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <span class="status-dot status-active"></span>
+                                    <span class="font-medium">AutoWeave API</span>
+                                </div>
+                                <span class="text-sm text-gray-500">:3002</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <span class="status-dot status-processing"></span>
+                                    <span class="font-medium">Rasa NLU</span>
+                                </div>
+                                <span class="text-sm text-gray-500">:5005</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <span class="status-dot status-processing"></span>
+                                    <span class="font-medium">Kotaemon</span>
+                                </div>
+                                <span class="text-sm text-gray-500">:7860</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center">
+                                    <span class="status-dot status-processing"></span>
+                                    <span class="font-medium">Taskcafe</span>
+                                </div>
+                                <span class="text-sm text-gray-500">:3333</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="chat-container p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">⚡ Actions Rapides</h3>
+                        
+                        <div class="space-y-2">
+                            <button onclick="openKotaemon()" class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                📁 Kotaemon RAG
+                            </button>
+                            <button onclick="openTaskcafe()" class="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
+                                📋 Taskcafe
+                            </button>
+                            <button onclick="openGitea()" class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                                🐙 Gitea
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const AUTOWEAVE_API_URL = 'http://localhost:3002';
+        let agents = [];
+        let ws = null;
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            try {
+                ws = new WebSocket('ws://localhost:3002/ws');
+                
+                ws.onopen = function() {
+                    updateStatus('Connecté', 'active');
+                    console.log('WebSocket connected');
+                };
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                };
+                
+                ws.onclose = function() {
+                    updateStatus('Déconnecté', 'inactive');
+                    setTimeout(initWebSocket, 5000); // Reconnect after 5s
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    updateStatus('Erreur', 'inactive');
+                };
+            } catch (error) {
+                console.error('WebSocket connection failed:', error);
+                updateStatus('Hors ligne', 'inactive');
+            }
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            if (data.type === 'chat') {
+                addMessage('assistant', data.content);
+            } else if (data.type === 'agent_created') {
+                addMessage('assistant', `🤖 Agent "${data.name}" créé avec succès !`);
+                loadAgents();
+            }
+        }
+
+        // Update status
+        function updateStatus(text, status) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = text;
+            statusElement.className = `text-sm text-gray-600 status-${status}`;
+        }
+
+        // Send message
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addMessage('user', message);
+                input.value = '';
+                
+                // Send to AutoWeave API
+                fetch(`${AUTOWEAVE_API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.response) {
+                        addMessage('assistant', data.response);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    addMessage('assistant', '❌ Erreur de communication avec AutoWeave');
+                });
+            }
+        }
+
+        // Handle Enter key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Add message to chat
+        function addMessage(sender, content) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message-${sender} p-3 rounded-lg mb-3 inline-block max-w-xs`;
+            
+            const senderLabel = sender === 'user' ? '👤 Vous' : '🤖 AutoWeave';
+            messageDiv.innerHTML = `<strong>${senderLabel}:</strong> ${content}`;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Load agents
+        function loadAgents() {
+            fetch(`${AUTOWEAVE_API_URL}/api/agents`)
+                .then(response => response.json())
+                .then(data => {
+                    agents = data.agents || [];
+                    updateAgentsList();
+                })
+                .catch(error => {
+                    console.error('Error loading agents:', error);
+                });
+        }
+
+        // Update agents list
+        function updateAgentsList() {
+            const agentsList = document.getElementById('agentsList');
+            agentsList.innerHTML = '';
+            
+            if (agents.length === 0) {
+                agentsList.innerHTML = '<p class="text-gray-500 text-center">Aucun agent trouvé</p>';
+                return;
+            }
+            
+            agents.forEach(agent => {
+                const agentDiv = document.createElement('div');
+                agentDiv.className = 'agent-card p-3 cursor-pointer';
+                agentDiv.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="status-dot status-${agent.status}"></span>
+                            <span class="font-medium">${agent.name}</span>
+                        </div>
+                        <button onclick="deleteAgent('${agent.id}')" class="text-red-500 hover:text-red-700">
+                            🗑️
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">${agent.description || 'Aucune description'}</p>
+                `;
+                agentsList.appendChild(agentDiv);
+            });
+        }
+
+        // Create agent
+        function createAgent() {
+            const description = prompt('Décrivez votre agent :');
+            if (description) {
+                fetch(`${AUTOWEAVE_API_URL}/api/agents`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ description: description })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addMessage('assistant', `🤖 Agent créé : ${data.agent.name}`);
+                        loadAgents();
+                    } else {
+                        addMessage('assistant', '❌ Erreur lors de la création de l\'agent');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error creating agent:', error);
+                    addMessage('assistant', '❌ Erreur lors de la création de l\'agent');
+                });
+            }
+        }
+
+        // Delete agent
+        function deleteAgent(agentId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cet agent ?')) {
+                fetch(`${AUTOWEAVE_API_URL}/api/agents/${agentId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addMessage('assistant', '🗑️ Agent supprimé');
+                        loadAgents();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting agent:', error);
+                });
+            }
+        }
+
+        // Quick actions
+        function openKotaemon() {
+            window.open('http://localhost:7860', '_blank');
+        }
+
+        function openTaskcafe() {
+            window.open('http://localhost:3333', '_blank');
+        }
+
+        function openGitea() {
+            window.open('http://localhost:3001', '_blank');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initWebSocket();
+            loadAgents();
+            
+            // Add welcome message
+            setTimeout(() => {
+                addMessage('assistant', '🎉 Interface AutoWeave initialisée ! Vous pouvez maintenant créer des agents, gérer vos projets et interagir avec l\'écosystème AutoWeave.');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

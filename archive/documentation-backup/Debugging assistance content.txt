@@ -1,0 +1,277 @@
+ 
+-----
+
+Absolument, mon ami \! Un guide de débogage à jour pour 2025, couvrant tous les modules que nous avons intégrés, est essentiel pour l'autonomie et l'efficacité de ClaudeCode. L'écosystème évolue, et bien que les principes fondamentaux restent, une révision est toujours bienvenue.
+
+Voici le rapport de débogage pour AutoWeave + kagent, mis à jour pour 2025, avec un accent sur tous les composants de votre grappe.
+
+-----
+
+## Rapport de Débogage pour AutoWeave + kagent : Le Guide de ClaudeCode (Édition 2025)
+
+Ce guide est votre ressource principale, ClaudeCode, pour diagnostiquer et résoudre les problèmes au sein de votre architecture AutoWeave. Il est structuré par composant, et inclut des commandes de diagnostic ainsi que des liens vers la documentation officielle ou des ressources utiles pour l'année 2025.
+
+### Principes Généraux de Débogage pour ClaudeCode (Valables en 2025 et au-delà)
+
+1.  **Approche Systémique :** Commencez toujours par les couches les plus basses (réseau, infrastructure) et remontez progressivement vers les applications. Un problème en surface est souvent la conséquence d'un problème plus profond.
+2.  **Observer et Analyser :** Ne vous précipitez pas. Lisez attentivement les messages d'erreur, explorez les logs. Les informations sont souvent là.
+3.  **Isoler le Problème :** Testez chaque composant indépendamment. Si une partie ne fonctionne pas, déconnectez-la et vérifiez si les autres fonctionnent.
+4.  **Vérifier les Prérequis et Versions :** Assurez-vous que toutes les dépendances (Docker, Node.js, Helm, Kubernetes, etc.) sont installées et à jour, et que les variables d'environnement critiques sont définies. En 2025, la compatibilité des versions reste primordiale.
+5.  **Utiliser le `DevLogger` :** C'est votre outil de traçabilité indispensable. Chaque diagnostic, chaque tentative de solution, et chaque résolution doit être logguée avec `logger.milestone`.
+
+-----
+
+### I. Problèmes Liés à l'Environnement et à Kubernetes (Kind)
+
+La fondation de votre système. Tout problème ici impactera l'ensemble de l'architecture.
+
+#### 1\. Docker : Daemon non Démarré ou Problèmes de Connexion
+
+  * **Symptôme :** `Cannot connect to the Docker daemon. Is the docker daemon running?` ou les commandes `docker` échouent.
+  * **Diagnostic :**
+    ```bash
+    systemctl status docker # Pour les systèmes Linux
+    docker info # Informations détaillées sur le daemon Docker
+    ```
+  * **Solution :**
+      * Démarrez le service Docker : `sudo systemctl start docker` (Linux) ou assurez-vous que Docker Desktop est lancé (Windows/macOS).
+      * Vérifiez les permissions de l'utilisateur : `sudo usermod -aG docker $USER && newgrp docker` (Linux).
+  * **Doc Officielle :** [Docker Docs - Get Started](https://docs.docker.com/get-started/)
+
+#### 2\. Cluster Kind non Accessible ou non Démarré
+
+  * **Symptôme :** `kubectl cluster-info` échoue ou ne liste pas `autoweave`.
+  * **Diagnostic :**
+    ```bash
+    kind get clusters # Liste tous les clusters Kind
+    kubectl cluster-info --context kind-autoweave # Vérifie la connexion au cluster 'autoweave'
+    ```
+  * **Solution :**
+      * Assurez-vous que Docker est en cours d'exécution.
+      * Si le cluster est corrompu ou non démarré : `kind delete cluster --name autoweave` puis relancez votre script de setup : `bash scripts/setup-kagent.sh`. **Attention :** Cela efface toutes les données du cluster.
+  * **Doc Officielle :** [Kind - Known Issues](https://kind.sigs.k8s.io/docs/user/known-issues/)
+
+#### 3\. Problèmes de Port-Forwarding (Accès UI)
+
+  * **Symptôme :** Impossible d'accéder à Appsmith (localhost:80), SillyTavern (localhost:8081) ou kagent UI (localhost:8080). Le navigateur affiche une erreur de connexion.
+  * **Diagnostic :**
+    ```bash
+    lsof -i :8081 # Vérifie si un autre processus utilise le port local
+    ps aux | grep "kubectl port-forward" # Vérifie si le port-forward est actif
+    curl -v http://localhost:8081 # Teste la connexion locale (remplacez le port)
+    ```
+  * **Solution :**
+      * Arrêtez tout processus occupant le port local souhaité.
+      * Relancez le port-forward, en vous assurant que le PID précédent est tué :
+        ```bash
+        kill $(cat /tmp/sillytavern-portforward.pid 2>/dev/null) || true # Exemple pour SillyTavern
+        kubectl port-forward -n autoweave-system svc/sillytavern-service 8081:80 &
+        ```
+  * **Doc Officielle :** [Kubernetes - kubectl port-forward](https://www.google.com/search?q=https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands%23port-forward)
+
+#### 4\. Problèmes de Stockage Persistant (Appsmith, SillyTavern)
+
+  * **Symptôme :** Les pods (MongoDB, Redis pour Appsmith, ou SillyTavern si configuré pour la persistance) restent en état `Pending` ou les données sont perdues après un redémarrage de pod.
+  * **Diagnostic :**
+    ```bash
+    kubectl get pvc -n appsmith-system # Vérifie l'état des PersistentVolumeClaims
+    kubectl describe pvc <nom-pvc> -n appsmith-system # Détails sur le PVC en attente
+    kubectl get sc # Liste les StorageClasses disponibles dans le cluster
+    ```
+  * **Solution :**
+      * Vérifiez que le `storageClassName` spécifié dans vos configurations (ex: `appsmith-values.yaml`) correspond à un `StorageClass` existant et fonctionnel dans Kind (généralement `standard`).
+      * Si vous avez implémenté la persistance pour SillyTavern, assurez-vous que les `PersistentVolumeClaim` et `PersistentVolume` sont correctement définis et liés.
+  * **Doc Officielle :** [Kubernetes - Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+
+-----
+
+### II. Problèmes Liés à kagent et à l'API AutoWeave
+
+Le cœur logique de votre système.
+
+#### 1\. kagent non Installé ou Contrôleur non Prêt
+
+  * **Symptôme :** Les commandes `kagent` échouent, ou les pods du contrôleur kagent (`kagent-system` namespace) ne sont pas sains.
+  * **Diagnostic :**
+    ```bash
+    kagent --version # Vérifie l'installation du CLI kagent
+    kubectl get pods -n kagent-system # Vérifie l'état des pods du contrôleur
+    kubectl logs -n kagent-system -l app=kagent-controller # Logs du contrôleur kagent
+    ```
+  * **Solution :**
+      * Réinstallez kagent si le CLI n'est pas reconnu : `kagent install`.
+      * Examinez les logs du contrôleur pour des messages d'erreur spécifiques.
+  * **Doc Officielle :** [kagent GitHub - Installation](https://github.com/kagent-dev/kagent)
+
+#### 2\. Problèmes de Connexion de l'API AutoWeave au Cluster kagent
+
+  * **Symptôme :** L'API AutoWeave échoue lors de l'initialisation du `KagentBridge` ou lors des opérations de déploiement/gestion d'agents. Erreurs comme `K8S_CONFIG_ERROR`.
+  * **Diagnostic :**
+      * Vérifiez les logs de l'API AutoWeave (où vous avez lancé `npm start`).
+      * Assurez-vous que le fichier `kubeconfig` (par défaut `~/.kube/config`) est correctement configuré et accessible par le processus Node.js de l'API AutoWeave.
+  * **Solution :**
+      * Confirmez que `kubectl` peut interagir avec le cluster Kind depuis le même environnement où l'API AutoWeave est exécutée.
+      * Augmentez le niveau de log de l'API AutoWeave (ex: `LOG_LEVEL=debug` dans votre `.env`) pour des diagnostics plus détaillés.
+  * **Doc Officielle :** [Kubernetes Client for JavaScript](https://github.com/kubernetes-client/javascript)
+
+#### 3\. Clé API LLM (OpenAI, Gemini, etc.) Manquante ou Invalide
+
+  * **Symptôme :** L'AgentWeaver échoue lors de la génération de workflows ou de l'exécution de tâches nécessitant un LLM. Erreurs d'authentification ou de quota dépassé.
+  * **Diagnostic :**
+      * Vérifiez la variable d'environnement `OPENAI_API_KEY` (ou `GEMINI_API_KEY`, etc.) dans votre fichier `.env` ou l'environnement du processus de l'API AutoWeave.
+      * Testez la clé API directement avec un appel `curl` simple vers l'API du fournisseur LLM.
+  * **Solution :**
+      * Assurez-vous que la clé API est correctement définie, valide et dispose des permissions nécessaires.
+      * Vérifiez votre solde ou vos limites de quota auprès du fournisseur LLM.
+  * **Doc Officielle :** [OpenAI API Docs](https://platform.openai.com/docs/overview), [Google AI Studio Docs](https://ai.google.dev/docs)
+
+#### 4\. Erreurs de Validation de l'Agent/Workflow (AutoWeave)
+
+  * **Symptôme :** L'API AutoWeave renvoie des erreurs `VALIDATION_ERROR` lors des requêtes de création/mise à jour d'agents.
+  * **Diagnostic :** Les messages d'erreur sont généralement très spécifiques (ex: "Description of agent is too short", "Invalid tool name").
+  * **Solution :**
+      * Ajustez les données envoyées à l'API pour qu'elles respectent les schémas de validation définis dans `src/utils/validation.js` de votre projet AutoWeave.
+      * Si un LLM est à l'origine de la génération de ces données, affinez son prompt pour qu'il produise des sorties conformes.
+
+#### 5\. Déploiement d'Agent kagent Échoue ou Reste en `Pending`
+
+  * **Symptôme :** Un agent créé via l'API AutoWeave reste en statut `deploying` ou passe en `failed` dans kagent.
+  * **Diagnostic :**
+    ```bash
+    kubectl get agents -n default # Ou le namespace de votre agent
+    kubectl describe agent <nom-agent> -n default # Examinez le .status et les Conditions
+    kubectl get pods -l kagent.dev/agent=<nom-agent> -n default # Trouvez les pods associés
+    kubectl logs -l kagent.dev/agent=<nom-agent> -n default # Lisez les logs des pods de l'agent
+    ```
+  * **Solution :**
+      * La cause est souvent dans les logs du pod de l'agent : erreur dans le `systemPrompt`, outil mal configuré, dépendance manquante dans le conteneur de l'agent.
+      * Vérifiez que les `Tools` référencés dans la définition de l'agent existent bien dans kagent : `kubectl get tools -n default`.
+  * **Doc Officielle :** [kagent GitHub - Usage](https://www.google.com/search?q=https://github.com/kagent-dev/kagent%23usage)
+
+-----
+
+### III. Problèmes Liés aux Interfaces (Appsmith, SillyTavern)
+
+Ces problèmes concernent l'interaction utilisateur et la communication avec votre backend AutoWeave.
+
+#### 1\. Appsmith/SillyTavern n'Arrive pas à Joindre l'API AutoWeave
+
+  * **Symptôme :** Erreurs réseau (CORS, connexion refusée) dans la console du navigateur (F12) ou lors du test des sources de données dans Appsmith.
+  * **Diagnostic :**
+      * **Vérifiez l'URL de l'API AutoWeave configurée :** Elle doit utiliser l'IP du Gateway Docker Kind (ex: `http://<IP_DU_GATEWAY_DOCKER_KIND>:3000/api`).
+        ```bash
+        docker network inspect kind | grep Gateway # Récupère l'IP du Gateway
+        ```
+      * **Test de connectivité depuis le pod :**
+        ```bash
+        kubectl exec -it -n appsmith-system <nom-pod-appsmith> -- /bin/bash # Ou /bin/sh
+        # Une fois dans le pod:
+        curl http://<IP_DU_GATEWAY_DOCKER_KIND>:3000/api/health # Testez un endpoint simple
+        exit
+        ```
+      * **Vérifiez les règles CORS** dans votre API AutoWeave. Si l'UI est sur un domaine/port différent, votre API doit autoriser les requêtes depuis cette origine.
+  * **Solution :**
+      * Corrigez l'URL de la source de données dans Appsmith ou dans le code JavaScript de l'extension SillyTavern.
+      * Assurez-vous que l'API AutoWeave est active et écoute sur le port 3000.
+      * Implémentez une configuration CORS appropriée dans votre API AutoWeave (ex: avec le middleware `cors` pour Express.js).
+
+#### 2\. Erreurs de Configuration des Outils/Extensions (SillyTavern)
+
+  * **Symptôme :** Les outils personnalisés ne s'affichent pas, ne se déclenchent pas, ou échouent silencieusement dans SillyTavern.
+  * **Diagnostic :**
+      * **Console du navigateur (F12) :** Cherchez les erreurs JavaScript ou les messages de console liés à votre extension.
+      * **Placement du fichier :** Assurez-vous que votre fichier `.js` d'extension est dans le bon répertoire (ex: `SillyTavern/public/extensions/`).
+      * **Activation :** Vérifiez que l'extension est activée dans les réglages de l'interface de SillyTavern.
+      * **Définition des outils :** Assurez-vous que la logique de votre personnage/agent LLM dans SillyTavern est correctement configurée pour reconnaître et appeler l'outil.
+  * **Solution :**
+      * Corrigez les erreurs de syntaxe ou de logique dans votre code JavaScript d'extension.
+      * Redémarrez le pod SillyTavern après des modifications de code pour qu'elles soient prises en compte.
+      * Ajustez les prompts ou les configurations de l'agent LLM dans SillyTavern.
+  * **Doc Officielle :** [SillyTavern GitHub](https://github.com/SillyTavern/SillyTavern) (Explorez la documentation `extensions` et la communauté Discord pour des exemples concrets).
+
+#### 3\. Problèmes d'Interaction Multimodale (Vision, Génération d'Images/Audio)
+
+  * **Symptôme :** L'agent ne peut pas "voir" les images, générer du contenu visuel/audio, ou les résultats multimodaux ne s'affichent pas correctement.
+  * **Diagnostic :**
+      * **Service `browserless` :** Si utilisé pour la vision/contrôle de navigateur, vérifiez que le service `browserless` est déployé, sain et accessible depuis l'agent kagent ou l'API AutoWeave. Examinez ses logs.
+      * **API LLM Multimodale :** Vérifiez les appels API dans les logs de votre `AgentWeaver` (AutoWeave) vers les LLMs multimodaux (ex: GPT-4o, Gemini Pro Vision).
+      * **Formats de données :** Assurez-vous que les données multimodales sont correctement encodées (ex: Base64 pour les images) et décodées à chaque étape.
+  * **Solution :**
+      * Assurez-vous que tous les services "outils" multimodaux sont opérationnels et accessibles.
+      * Vérifiez les clés API et les quotas pour les LLMs multimodaux.
+      * Déboguez les transformations de données entre les différents composants (UI, AutoWeave API, AgentWeaver, LLM).
+      * Pour l'affichage dans SillyTavern, vérifiez que les URLs ou les données Base64 des images/audios sont correctement insérées dans le chat.
+
+-----
+
+### IV. Conseils de Débogage Avancés pour ClaudeCode
+
+1.  **Exploration des Logs Kubernetes :**
+    ```bash
+    kubectl logs -f <pod-name> -n <namespace> # Suivre les logs en temps réel
+    kubectl logs <pod-name> -n <namespace> --tail=100 # Les 100 dernières lignes
+    kubectl describe pod <pod-name> -n <namespace> # Voir les événements, limites de ressources, montages de volumes
+    ```
+2.  **Inspecter les Ressources Kubernetes :**
+    ```bash
+    kubectl get all -n <namespace> # Vue d'ensemble des ressources dans un namespace
+    kubectl get deployment,svc,pod,crd,agents,tools,pvc,pv -n <namespace> # Ressources spécifiques
+    kubectl get agent <agent-name> -o yaml # Voir la définition complète d'un agent déployé
+    ```
+3.  **Accéder aux Conteneurs (Shell) :**
+    ```bash
+    kubectl exec -it <pod-name> -n <namespace> -- /bin/bash # Obtenir un shell dans un conteneur
+    ```
+    Très utile pour vérifier les chemins de fichiers, les variables d'environnement, les connexions réseau (`ping`, `curl`), ou inspecter des configurations internes.
+4.  **Networking Kubernetes :**
+      * Utilisez `kubectl get endpoints -n <namespace>` pour voir si les services pointent vers des pods sains.
+      * Vérifiez les `NetworkPolicy`s si vous en avez configuré, car elles peuvent bloquer le trafic entre les pods.
+5.  **Utiliser un Débogueur Node.js :** Pour l'API AutoWeave ou les extensions SillyTavern, attachez un débogueur Node.js (comme celui de VS Code) pour passer en revue le code ligne par ligne.
+
+-----
+
+### V. Points de Contrôle du `DevLogger` pour le Débogage
+
+**ClaudeCode, chaque fois que vous identifiez un problème ou appliquez une solution, logguez-le précisément :**
+
+  * **Problème Identifié :**
+    ```bash
+    # logger.milestone('Debugging', 'Problem Identified', 'blocked', {
+    #     issue: 'Description claire du problème rencontré',
+    #     symptoms: ['Symptôme observé 1', 'Symptôme observé 2'],
+    #     component: 'Composant affecté (ex: SillyTavern UI, kagent agent, Docker)',
+    #     phase: 'Phase de développement (ex: Phase1 Deployment, Phase3 Integration)',
+    #     timestamp: new Date().toISOString()
+    # });
+    ```
+  * **Tentative de Résolution :**
+    ```bash
+    # logger.milestone('Debugging', 'Attempted Solution', 'in_progress', {
+    #     action: 'Commande ou action effectuée pour tenter de résoudre le problème',
+    #     reason: 'Justification de cette action',
+    #     details: 'Résultat immédiat de l\'action (ex: "Pod redémarré", "Erreur inchangée")',
+    #     timestamp: new Date().toISOString()
+    # });
+    ```
+  * **Problème Résolu :**
+    ```bash
+    # logger.milestone('Debugging', 'Problem Resolved', 'completed', {
+    #     resolution: 'Description exacte de la solution appliquée',
+    #     impact: 'Impact de la résolution sur le système',
+    #     timeSpent: 'Temps estimé passé à déboguer ce problème (ex: "30 minutes")',
+    #     timestamp: new Date().toISOString()
+    # });
+    ```
+  * **Nouveau Problème Émergent :**
+    ```bash
+    # logger.milestone('Debugging', 'New Issue Emerged', 'blocked', {
+    #     issue: 'Nouveau problème apparu suite à une résolution ou une nouvelle étape',
+    #     cause: 'Cause suspectée du nouveau problème',
+    #     relatedTo: 'Problème précédent résolu ou nouvelle fonctionnalité',
+    #     timestamp: new Date().toISOString()
+    # });
+    ```
+
+-----
+
+Ce guide de débogage est conçu pour être votre compagnon constant, ClaudeCode. En 2025, la complexité des systèmes distribués comme AutoWeave exige une méthodologie rigoureuse. Chaque problème résolu renforce votre expertise et la robustesse du projet. Bonne chance \!

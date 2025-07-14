@@ -1,0 +1,295 @@
+# Example: Multi-Cluster Orchestrator Agent
+# This agent manages applications across multiple Kubernetes clusters,
+# handling failover, load distribution, and cross-region coordination
+
+apiVersion: kagent.dev/v1alpha1
+kind: Agent
+metadata:
+  name: multi-cluster-orchestrator
+  labels:
+    autoweave.dev/generated: "true"
+    autoweave.dev/version: "0.1.0"
+    autoweave.dev/category: "infrastructure-orchestration"
+spec:
+  systemPrompt: |
+    You are a Multi-Cluster Orchestrator Agent created by AutoWeave.
+    
+    Your mission: Intelligently manage and orchestrate applications across multiple
+    Kubernetes clusters spanning different regions and cloud providers, ensuring
+    high availability, optimal performance, and cost efficiency.
+    
+    Core Capabilities:
+    
+    1. Cluster Federation Management:
+       - Monitor health of all connected clusters
+       - Manage cross-cluster networking and service mesh
+       - Coordinate cluster upgrades and maintenance
+       - Handle cluster registration and deregistration
+    
+    2. Intelligent Workload Distribution:
+       - Analyze cluster capacity and performance metrics
+       - Distribute workloads based on:
+         * Geographic proximity to users
+         * Resource availability
+         * Cost optimization
+         * Compliance requirements
+       - Implement anti-affinity rules for HA
+    
+    3. Disaster Recovery & Failover:
+       - Detect cluster failures within 30 seconds
+       - Automatic workload migration
+       - Data replication coordination
+       - DNS and traffic management
+       - State reconciliation after recovery
+    
+    4. Global Load Balancing:
+       - Route traffic based on latency
+       - Implement geo-fencing for data sovereignty
+       - A/B testing across regions
+       - Gradual rollout coordination
+    
+    5. Cost Optimization:
+       - Spot instance utilization
+       - Reserved capacity planning
+       - Cross-region data transfer optimization
+       - Idle resource detection and cleanup
+    
+    6. Compliance & Governance:
+       - Ensure data residency requirements
+       - Implement network policies across clusters
+       - Coordinate security patches
+       - Audit trail across all clusters
+    
+    Decision Framework:
+    - Priority 1: Application availability (99.99% SLA)
+    - Priority 2: Performance (p99 latency < 100ms)
+    - Priority 3: Cost optimization
+    - Priority 4: Compliance requirements
+    
+    Supported Platforms:
+    - AWS EKS, GCP GKE, Azure AKS
+    - On-premise Kubernetes
+    - Edge clusters
+    - Hybrid cloud deployments
+
+  tools:
+    - type: McpServer
+      mcpServer:
+        url: "http://cluster-manager:3000/tools"
+        timeout: 60000
+    - type: McpServer
+      mcpServer:
+        url: "http://workload-scheduler:3000/tools"
+        timeout: 45000
+    - type: McpServer
+      mcpServer:
+        url: "http://network-controller:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://metrics-aggregator:3000/tools"
+        timeout: 30000
+    - type: McpServer
+      mcpServer:
+        url: "http://cost-analyzer:3000/tools"
+        timeout: 45000
+    - type: McpServer
+      mcpServer:
+        url: "http://compliance-validator:3000/tools"
+        timeout: 30000
+    - type: Agent
+      agent:
+        name: "disaster-recovery-coordinator"
+        namespace: "cluster-management"
+    - type: Agent
+      agent:
+        name: "traffic-manager"
+        namespace: "cluster-management"
+    
+  modelConfig:
+    name: gpt-4
+    temperature: 0.4  # Balanced for strategic decisions
+    maxTokens: 8000
+    
+  # Multi-cluster specific configuration
+  orchestrationConfig:
+    clusters:
+      discovery:
+        method: "auto"  # auto, manual, service-mesh
+        interval: "30s"
+        
+      health:
+        checkInterval: "10s"
+        failureThreshold: 3
+        successThreshold: 2
+        
+    workloadPlacement:
+      strategy: "balanced"  # balanced, cost-optimized, performance, geographic
+      constraints:
+        maxCrossRegionTraffic: "1TB/day"
+        dataResidency:
+          - region: "eu-*"
+            data: ["pii", "financial"]
+          - region: "us-*"
+            data: ["general"]
+            
+    failover:
+      detectionTime: "30s"
+      gracePerod: "5m"
+      automaticFailback: true
+      preserveState: true
+      
+    scaling:
+      global:
+        minClusters: 2
+        maxClusters: 10
+      perCluster:
+        minNodes: 3
+        maxNodes: 100
+        
+---
+# ConfigMap for cluster configurations
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-registry
+  labels:
+    autoweave.dev/agent: "multi-cluster-orchestrator"
+data:
+  clusters.yaml: |
+    clusters:
+      production-us-east:
+        provider: "aws"
+        region: "us-east-1"
+        endpoint: "https://k8s-prod-use1.example.com"
+        capacity:
+          nodes: 50
+          cpu: "200 cores"
+          memory: "800Gi"
+        characteristics:
+          - "gpu-enabled"
+          - "high-memory"
+          - "spot-instances"
+          
+      production-eu-west:
+        provider: "gcp"
+        region: "europe-west1"
+        endpoint: "https://k8s-prod-euw1.example.com"
+        capacity:
+          nodes: 30
+          cpu: "120 cores"
+          memory: "480Gi"
+        characteristics:
+          - "gdpr-compliant"
+          - "low-latency-networking"
+          
+      production-asia-pacific:
+        provider: "azure"
+        region: "japaneast"
+        endpoint: "https://k8s-prod-jpe.example.com"
+        capacity:
+          nodes: 25
+          cpu: "100 cores"
+          memory: "400Gi"
+        characteristics:
+          - "edge-computing"
+          - "iot-optimized"
+          
+      edge-clusters:
+        - name: "edge-newyork"
+          location: "40.7128,-74.0060"
+          capacity: "small"
+        - name: "edge-london"
+          location: "51.5074,-0.1278"
+          capacity: "small"
+        - name: "edge-tokyo"
+          location: "35.6762,139.6503"
+          capacity: "medium"
+          
+---
+# Custom Resource for Multi-Cluster Application
+apiVersion: orchestrator.autoweave.dev/v1
+kind: MultiClusterApplication
+metadata:
+  name: global-web-app
+  labels:
+    autoweave.dev/agent: "multi-cluster-orchestrator"
+spec:
+  replicas:
+    total: 100
+    distribution:
+      strategy: "weighted"
+      weights:
+        production-us-east: 40
+        production-eu-west: 35
+        production-asia-pacific: 25
+        
+  placement:
+    requirements:
+      - type: "anti-affinity"
+        level: "cluster"
+        topologyKey: "failure-zone"
+      - type: "preferred"
+        characteristic: "gpu-enabled"
+        weight: 80
+        
+  networking:
+    serviceMesh:
+      enabled: true
+      type: "istio"
+    globalLoadBalancer:
+      enabled: true
+      algorithm: "geo-proximity"
+      healthCheck:
+        interval: "5s"
+        timeout: "2s"
+        
+  dataSync:
+    enabled: true
+    strategy: "eventual-consistency"
+    conflictResolution: "last-write-wins"
+    replicationFactor: 3
+    
+---
+# NetworkPolicy for cross-cluster communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: multi-cluster-mesh
+  labels:
+    autoweave.dev/agent: "multi-cluster-orchestrator"
+spec:
+  podSelector:
+    matchLabels:
+      app: multi-cluster-orchestrator
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: cluster-management
+    - podSelector:
+        matchLabels:
+          role: cluster-controller
+    ports:
+    - protocol: TCP
+      port: 8080  # Management API
+    - protocol: TCP
+      port: 9090  # Metrics
+  egress:
+  - to:
+    - namespaceSelector: {}  # Allow all namespaces
+    ports:
+    - protocol: TCP
+      port: 443   # Kubernetes API
+    - protocol: TCP
+      port: 6443  # Alternative K8s API
+  - to:
+    - podSelector:
+        matchLabels:
+          app: cluster-registry
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL for state
