@@ -88,43 +88,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Integration Agent Module Details
 
 ### Components Implemented
-1. **OpenAPI Parser** (`src/agents/integration-agent/openapi-parser.js`)
+1. **OpenAPI Parser** (`packages/agents/src/integration-agent/openapi-parser.js`)
    - OpenAPI 3.x parsing with openapi-core
    - Specification validation and error reporting
    - Complexity analysis and metadata extraction
    - Python bridge integration
 
-2. **Pydantic Generator** (`src/agents/integration-agent/pydantic-generator.js`)
+2. **Pydantic Generator** (`packages/agents/src/integration-agent/pydantic-generator.js`)
    - Automatic model generation from OpenAPI schemas
    - Type safety and validation
    - Code generation with datamodel-code-generator
    - Model organization and structuring
 
-3. **Integration Agent Core** (`src/agents/integration-agent/integration-agent.js`)
+3. **Integration Agent Core** (`packages/agents/src/integration-agent/integration-agent.js`)
    - Kubernetes manifest generation (Deployment, Service, Ingress)
    - Manifest validation with kubeconform
    - Policy enforcement with conftest
    - Agent lifecycle management
 
-4. **GitOps Manager** (`src/agents/integration-agent/gitops-manager.js`)
+4. **GitOps Manager** (`packages/agents/src/integration-agent/gitops-manager.js`)
    - Git repository operations with simple-git
    - Argo CD Application generation
    - Automated deployment workflows
    - Branch management and versioning
 
-5. **LangChain Orchestrator** (`src/agents/integration-agent/langchain-orchestrator.js`)
+5. **LangChain Orchestrator** (`packages/agents/src/integration-agent/langchain-orchestrator.js`)
    - AI-powered integration planning
    - Dynamic workflow orchestration
    - Tool calling and execution
    - Performance optimization
 
-6. **Metrics Collector** (`src/agents/integration-agent/metrics-collector.js`)
+6. **Metrics Collector** (`packages/agents/src/integration-agent/metrics-collector.js`)
    - Prometheus metrics collection
    - Integration performance tracking
    - Error analytics and reporting
    - Dashboard integration
 
-7. **Module Entry Point** (`src/agents/integration-agent/index.js`)
+7. **Module Entry Point** (`packages/agents/src/integration-agent/index.js`)
    - Component initialization and coordination
    - Main API endpoints
    - Error handling and logging

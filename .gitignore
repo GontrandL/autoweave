@@ -140,3 +140,5 @@ package.json.workspace
 # Old structure (to be removed after migration)
 /src.old/
 /autoweave-repos.old/
+# Security: .env.*.local
+.env.*.local

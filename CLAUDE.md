@@ -20,34 +20,41 @@ AutoWeave is a revolutionary platform that democratizes AI agent creation. It's 
 
 ### Architecture Components
 
-1. **Core Engine** (`/src/core/`)
-   - `agent-weaver.js`: Main orchestration logic
-   - `autoweave.js`: Core AutoWeave class
+1. **Core Engine** (`/packages/core/src/`)
+   - `autoweave.js`: Main orchestration logic
+   - `agent-weaver.js`: Agent creation and management
    - `config-intelligence.js`: AI-powered configuration generation
 
-2. **Integration Layer** (`/src/kagent/`)
-   - `bridge.js`: AutoWeave to kagent translation
-   - `yaml-generator.js`: Kubernetes manifest generation
-
-3. **Memory System** (`/src/memory/`)
+2. **Memory System** (`/packages/memory/src/`)
    - `hybrid-memory.js`: Fusion of contextual and structural memory
    - `mem0-client.js`: Vector-based contextual memory
    - `graph-client.js`: Graph-based structural memory
+   - `redis-ml-cache.js`: ML-powered caching layer
 
-4. **Agent Modules** (`/autoweave-repos/`)
-   - `autoweave-core`: Core orchestration engine
-   - `autoweave-agents`: Specialized agent implementations
-   - `autoweave-backend`: API and service management
-   - `autoweave-ui`: User interfaces and extensions
-   - `autoweave-integrations`: Protocol bridges (ANP, MCP)
-   - `autoweave-memory`: Hybrid memory system
-   - `autoweave-deployment`: K8s deployment configs
+3. **Agent System** (`/packages/agents/src/`)
+   - `debugging-agent.js`: Intelligent debugging assistant
+   - `self-awareness-agent.js`: Self-monitoring and optimization
+   - `integration-agent/`: External service integrations
 
-5. **Protocols** (`/src/anp/`, `/src/mcp/`)
-   - ANP Server: Agent-to-agent communication (port 8083)
-   - MCP Server: LLM tool exposure (port 3002)
-   - AG-UI: Dynamic WebSocket UI (port 3000/ws)
+4. **Backend Services** (`/packages/backend/src/`)
+   - `routes/`: REST API endpoints
+   - `services/`: Business logic and service layer
+   - `index.js`: Express server setup
 
+5. **Integrations** (`/packages/integrations/src/`)
+   - `mcp/`: Model Context Protocol server
+   - `anp/`: Agent Network Protocol (if implemented)
+
+6. **CLI Tools** (`/packages/cli/src/`)
+   - `create-agent.js`: Agent creation command
+
+7. **Shared Utilities** (`/packages/shared/src/`)
+   - `utils/`: Common utilities and helpers
+
+8. **Deployment** (`/packages/deployment/src/`)
+   - `helm/`: Helm charts for Kubernetes
+   - `k8s/`: Kubernetes manifests
+   - `Dockerfile`: Container configuration
 ## Development Guidelines
 
 ### Code Style
@@ -58,13 +65,12 @@ AutoWeave is a revolutionary platform that democratizes AI agent creation. It's 
 - Write tests for new functionality
 
 ### File Organization
-- Core logic in `/src/core/`
-- API routes in `/src/routes/`
-- Utilities in `/src/utils/`
-- Agent-specific code in `/src/agents/`
-- Memory components in `/src/memory/`
-- Protocol implementations in `/src/anp/` and `/src/mcp/`
-
+- Core logic in `/packages/core/src/`
+- API routes in `/packages/backend/src/routes/`
+- Utilities in `/packages/shared/src/utils/`
+- Agent-specific code in `/packages/agents/src/`
+- Memory components in `/packages/memory/src/`
+- Protocol implementations in `/packages/integrations/src/`
 ### Testing Strategy
 - Unit tests in `/tests/unit/`
 - Integration tests in `/tests/integration/`
@@ -92,17 +98,18 @@ Optional:
 
 ### Working with Agent Modules
 
-Each agent module in `/autoweave-repos/` is a separate npm package:
+The project is organized as a monorepo with the following packages:
 
-1. **autoweave-core**: Main orchestration engine
-2. **autoweave-agents**: Agent implementations (debugging, integration, self-awareness)
-3. **autoweave-backend**: API server and service management
-4. **autoweave-ui**: User interfaces (ChatUI, SillyTavern, Appsmith)
-5. **autoweave-integrations**: Protocol bridges and external integrations
-6. **autoweave-memory**: Hybrid memory system
-7. **autoweave-deployment**: Deployment scripts and K8s configs
-8. **autoweave-cli**: Command-line interface
+1. **@autoweave/core**: Main orchestration engine
+2. **@autoweave/agents**: Agent implementations (debugging, integration, self-awareness)
+3. **@autoweave/backend**: API server and service management
+4. **@autoweave/memory**: Hybrid memory system
+5. **@autoweave/integrations**: Protocol bridges and external integrations
+6. **@autoweave/cli**: Command-line interface
+7. **@autoweave/deployment**: Deployment scripts and K8s configs
+8. **@autoweave/shared**: Shared utilities and types
 
+Each package has its own `package.json` and can be developed independently while sharing common dependencies through the workspace.
 ### Integration Points
 - **kagent**: Kubernetes runtime for agents
 - **mem0**: Self-hosted contextual memory

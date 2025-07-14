@@ -1,0 +1,100 @@
+{
+  "timestamp": "2025-07-14T06:17:08.694Z",
+  "outdatedPaths": [
+    {
+      "file": "CHANGELOG.md",
+      "issue": "Contains references to old /src/ structure"
+    }
+  ],
+  "issues": [
+    {
+      "file": "CLAUDE.md",
+      "issue": "Outdated path for Routes path",
+      "oldPath": "src\\/routes\\/",
+      "newPath": "packages/backend/src/routes/"
+    },
+    {
+      "file": "CLAUDE.md",
+      "issue": "Outdated path for Utils path",
+      "oldPath": "src\\/utils\\/",
+      "newPath": "packages/shared/src/utils/"
+    },
+    {
+      "file": "AUTOWEAVE_AUDIT_REPORT.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../agents/integration-agent"
+    },
+    {
+      "file": "DEPENDENCY_AUDIT_REPORT.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../config/autoweave/config"
+    },
+    {
+      "file": "DEPENDENCY_AUDIT_REPORT.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../config/autoweave/config"
+    },
+    {
+      "file": "DEPENDENCY_AUDIT_REPORT.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../config/autoweave/config"
+    },
+    {
+      "file": "autoweave-clean/docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../utils/logger"
+    },
+    {
+      "file": "autoweave-clean/docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../kagent/bridge"
+    },
+    {
+      "file": "autoweave-clean/docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../../config/autoweave/config"
+    },
+    {
+      "file": "autoweave-clean/docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../core/agent-weaver"
+    },
+    {
+      "file": "autoweave-clean/docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../tests/setup"
+    },
+    {
+      "file": "docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../utils/logger"
+    },
+    {
+      "file": "docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../kagent/bridge"
+    },
+    {
+      "file": "docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../../config/autoweave/config"
+    },
+    {
+      "file": "docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../core/agent-weaver"
+    },
+    {
+      "file": "docs/ANP et AG-UI.md",
+      "issue": "Relative import should use @autoweave/* workspace",
+      "path": "../tests/setup"
+    }
+  ],
+  "missingDocs": [],
+  "summary": {
+    "totalIssues": 17,
+    "outdatedPathCount": 1,
+    "issueCount": 16,
+    "missingDocCount": 0
+  }
+}
