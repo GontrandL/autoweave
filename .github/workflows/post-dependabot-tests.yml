@@ -1,0 +1,127 @@
+name: Post-Dependabot Comprehensive Tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-dependabot-merge:
+    name: Check if Dependabot Merge
+    runs-on: ubuntu-latest
+    outputs:
+      is-dependabot: ${{ steps.check.outputs.is-dependabot }}
+    
+    steps:
+      - name: Check if last commit is from Dependabot
+        id: check
+        run: |
+          AUTHOR=$(git log -1 --pretty=format:'%an')
+          if [[ "$AUTHOR" == "dependabot[bot]" ]]; then
+            echo "is-dependabot=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-dependabot=false" >> $GITHUB_OUTPUT
+          fi
+
+  comprehensive-tests:
+    name: Run Comprehensive Tests
+    needs: check-dependabot-merge
+    if: needs.check-dependabot-merge.outputs.is-dependabot == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run comprehensive tests
+        run: |
+          chmod +x ./scripts/run-comprehensive-tests.sh
+          ./scripts/run-comprehensive-tests.sh
+        continue-on-error: true
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report-${{ matrix.node-version }}
+          path: test-report-*.json
+
+      - name: Comment on commit
+        if: failure() && needs.check-dependabot-merge.outputs.is-dependabot == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commit_sha = context.sha;
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commit_sha,
+              body: '⚠️ Comprehensive tests failed after Dependabot update. Please review the test results.'
+            });
+
+  performance-monitoring:
+    name: Monitor Workflow Performance
+    runs-on: ubuntu-latest
+    if: github.event.schedule || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run performance monitoring
+        run: |
+          chmod +x ./scripts/monitor-workflow-performance.sh
+          ./scripts/monitor-workflow-performance.sh
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: workflow-performance-report
+          path: workflow-performance-report-*.json
+
+      - name: Create issue if performance degrades
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Auto-merge workflow performance degradation detected',
+              body: 'The workflow performance monitoring script detected issues. Please review the performance report.',
+              labels: ['performance', 'auto-merge']
+            });
