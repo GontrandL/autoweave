@@ -1,0 +1,650 @@
+# AutoWeave Production Values
+# Production-ready configuration with security hardening,
+# high availability, and comprehensive monitoring
+
+global:
+  imageRegistry: ghcr.io
+  imagePullSecrets:
+    - name: autoweave-registry-secret
+  storageClass: "fast-ssd"
+  timezone: "UTC"
+  
+  # Security context for all pods
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1001
+
+# Core AutoWeave configuration
+autoweave:
+  replicaCount: 3
+  
+  image:
+    repository: autoweave/autoweave
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+    digest: ""  # For immutable deployments
+  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "3000"
+      prometheus.io/path: "/metrics"
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "60s"
+      nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - host: autoweave.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: autoweave-tls
+        hosts:
+          - autoweave.example.com
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+      ephemeral-storage: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+      ephemeral-storage: 1Gi
+  
+  # Probes for health checking
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+    
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+    
+  startupProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+  
+  # Environment configuration
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: info
+    PORT: "3000"
+    HOST: "0.0.0.0"
+    METRICS_ENABLED: "true"
+    SECURITY_HEADERS_ENABLED: "true"
+    
+  # Secret management
+  secrets:
+    create: true
+    annotations:
+      reloader.stakater.com/match: "true"
+    data:
+      # These should be provided via external secret management
+      openai-api-key: ""
+      anthropic-api-key: ""
+      database-url: ""
+      redis-url: ""
+      jwt-secret: ""
+      encryption-key: ""
+
+# High Availability Redis Configuration
+redis:
+  enabled: true
+  architecture: replication
+  
+  auth:
+    enabled: true
+    existingSecret: "autoweave-redis-secret"
+    existingSecretPasswordKey: "password"
+  
+  master:
+    count: 1
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  
+  sentinel:
+    enabled: true
+    persistence:
+      enabled: false
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: monitoring
+
+# PostgreSQL Database (Optional)
+postgresql:
+  enabled: true
+  architecture: replication
+  
+  auth:
+    existingSecret: "autoweave-postgres-secret"
+    secretKeys:
+      adminPasswordKey: "postgres-password"
+      userPasswordKey: "password"
+      replicationPasswordKey: "replication-password"
+    database: "autoweave"
+    username: "autoweave"
+  
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+    
+  readReplicas:
+    replicaCount: 1
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: "fast-ssd"
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: monitoring
+
+# Observability Stack
+observability:
+  enabled: true
+  namespace: observability
+  
+  # Prometheus for metrics
+  prometheus:
+    enabled: true
+    server:
+      persistence:
+        enabled: true
+        size: 100Gi
+        storageClass: "fast-ssd"
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 8Gi
+        requests:
+          cpu: 1000m
+          memory: 4Gi
+      retention: "30d"
+      retentionSize: "90GB"
+    
+    alertmanager:
+      enabled: true
+      persistence:
+        enabled: true
+        size: 10Gi
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+    
+    nodeExporter:
+      enabled: true
+    
+    kubeStateMetrics:
+      enabled: true
+  
+  # Grafana for visualization
+  grafana:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+    adminPassword: ""  # Should be provided via secret
+    
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      hosts:
+        - monitoring.autoweave.example.com
+      tls:
+        - secretName: grafana-tls
+          hosts:
+            - monitoring.autoweave.example.com
+    
+    dashboardProviders:
+      dashboardproviders.yaml:
+        apiVersion: 1
+        providers:
+        - name: 'autoweave'
+          orgId: 1
+          folder: 'AutoWeave'
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/autoweave
+  
+  # Loki for log aggregation
+  loki:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 200Gi
+      storageClass: "fast-ssd"
+    
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+    
+    config:
+      limits_config:
+        retention_period: 744h  # 31 days
+        max_query_series: 100000
+        max_query_parallelism: 32
+      
+      chunk_store_config:
+        max_look_back_period: 744h
+      
+      table_manager:
+        retention_deletes_enabled: true
+        retention_period: 744h
+  
+  # Tempo for distributed tracing
+  tempo:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "fast-ssd"
+    
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+    config:
+      retention: 336h  # 14 days
+
+# Message Queue (RabbitMQ)
+messageQueue:
+  rabbitmq:
+    enabled: true
+    replicaCount: 3
+    
+    auth:
+      username: "autoweave"
+      existingPasswordSecret: "autoweave-rabbitmq-secret"
+      existingSecretPasswordKey: "password"
+    
+    clustering:
+      enabled: true
+      rebalance: true
+    
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "fast-ssd"
+    
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+
+# Security Configuration
+security:
+  # Pod Security Standards
+  podSecurityStandards:
+    enforce: "restricted"
+    audit: "restricted"
+    warn: "restricted"
+  
+  # Network Policies
+  networkPolicy:
+    enabled: true
+    policyTypes:
+      - Ingress
+      - Egress
+    
+    # Default deny all
+    defaultDeny: true
+    
+    # Allowed ingress
+    ingress:
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              name: nginx-ingress
+        ports:
+        - protocol: TCP
+          port: 3000
+      
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              name: observability
+        ports:
+        - protocol: TCP
+          port: 3000
+    
+    # Allowed egress
+    egress:
+      # DNS
+      - to: []
+        ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+      
+      # HTTPS for external APIs
+      - to: []
+        ports:
+        - protocol: TCP
+          port: 443
+      
+      # Redis
+      - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+        ports:
+        - protocol: TCP
+          port: 6379
+      
+      # PostgreSQL
+      - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+        ports:
+        - protocol: TCP
+          port: 5432
+  
+  # RBAC
+  rbac:
+    create: true
+    rules:
+      - apiGroups: [""]
+        resources: ["pods", "services", "endpoints"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: [""]
+        resources: ["secrets"]
+        verbs: ["get"]
+      - apiGroups: ["apps"]
+        resources: ["deployments"]
+        verbs: ["get", "list", "watch"]
+  
+  # Service Account
+  serviceAccount:
+    create: true
+    automount: true
+    annotations:
+      eks.amazonaws.com/role-arn: ""  # For AWS IRSA if applicable
+
+# Auto-scaling Configuration
+autoscaling:
+  enabled: true
+  
+  horizontal:
+    minReplicas: 3
+    maxReplicas: 20
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 70
+      - type: Resource
+        resource:
+          name: memory
+          target:
+            type: Utilization
+            averageUtilization: 80
+    
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+  
+  vertical:
+    enabled: false  # Enable if VPA is available
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Node Affinity and Tolerations
+nodeSelector:
+  kubernetes.io/arch: amd64
+  node-type: "compute"
+
+tolerations:
+- key: "autoweave.io/dedicated"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - autoweave
+        topologyKey: kubernetes.io/hostname
+    
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: app.kubernetes.io/name
+          operator: In
+          values:
+          - autoweave
+      topologyKey: topology.kubernetes.io/zone
+
+# Service Mesh Integration
+serviceMesh:
+  istio:
+    enabled: false
+    virtualService:
+      enabled: false
+      gateways: []
+      hosts: []
+    
+    destinationRule:
+      enabled: false
+      trafficPolicy:
+        tls:
+          mode: ISTIO_MUTUAL
+    
+    peerAuthentication:
+      enabled: false
+      mode: STRICT
+    
+    authorizationPolicy:
+      enabled: false
+
+# Backup and Recovery
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  
+  velero:
+    enabled: true
+    storageLocation: "default"
+    volumeSnapshotLocation: "default"
+    ttl: "720h"  # 30 days
+    
+    includedNamespaces:
+      - autoweave-system
+      - observability
+    
+    excludedResources:
+      - events
+      - events.events.k8s.io
+
+# Monitoring and Alerting Rules
+monitoring:
+  alerts:
+    enabled: true
+    
+    rules:
+      - alert: AutoWeaveDown
+        expr: up{job="autoweave"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AutoWeave service is down"
+          description: "AutoWeave service has been down for more than 2 minutes"
+      
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }}"
+      
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+          description: "95th percentile latency is {{ $value }}s"
+      
+      - alert: MemoryUsageHigh
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"

@@ -5,10 +5,11 @@
   <p><strong>Transform Natural Language into Production-Ready AI Agents</strong></p>
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
   [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
-  [![Python](https://img.shields.io/badge/Python-3.8+-blue)](https://python.org)
   [![Kubernetes](https://img.shields.io/badge/kubernetes-native-blue)](https://kubernetes.io)
-  [![ANP Protocol](https://img.shields.io/badge/ANP-1.0-purple)](docs/ANP-AG-UI-Implementation-Guide.md)
+  [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-Integrated-orange)](https://opentelemetry.io/)
+  [![GraphQL](https://img.shields.io/badge/GraphQL-Federation-pink)](https://graphql.org/)
   [![Status](https://img.shields.io/badge/Status-Production%20Ready-green)](https://github.com/autoweave/autoweave)
   
   <p><em>"We don't just orchestrate agents. We weave the future of autonomous intelligence."</em></p>
@@ -18,13 +19,16 @@
 
 ## 🎯 What is AutoWeave?
 
-AutoWeave is a revolutionary platform that democratizes AI agent creation. Simply describe what you need in natural language, and AutoWeave automatically:
+AutoWeave is a revolutionary platform that democratizes AI agent creation with enterprise-grade infrastructure. Simply describe what you need in natural language, and AutoWeave automatically:
 
-✨ **Generates** intelligent agent workflows  
-🚀 **Deploys** to Kubernetes via kagent  
-🔗 **Integrates** with existing APIs and services  
-🧠 **Remembers** context with hybrid memory  
-🤝 **Communicates** via standard protocols (ANP/MCP)  
+✨ **Generates** intelligent agent workflows with TypeScript  
+🚀 **Deploys** to Kubernetes with comprehensive observability  
+🔗 **Integrates** with existing APIs via GraphQL federation  
+🧠 **Remembers** context with hybrid memory systems  
+🤝 **Communicates** via standard protocols (ANP/MCP/OpenTelemetry)  
+🔌 **Detects** USB devices with hot-plug support  
+⚡ **Processes** jobs with BullMQ queue management  
+📊 **Monitors** everything with Grafana stack  
 
 **Example:** *"Create an agent that monitors my Kubernetes cluster and automatically scales based on custom business metrics"*
 
@@ -32,17 +36,20 @@ AutoWeave handles the complexity—you focus on the vision.
 
 ## 🌟 Key Features
 
-### 🧠 AI Intelligence Ecosystem (NEW!)
-- **6 Specialized Agents**: Diagnostic, Security, Analytics, Monitoring, Performance, Configuration
-- **ML-Based Cache**: Redis cache with pattern recognition and auto-optimization
-- **Self-Learning System**: Continuous performance improvement and optimization
-- **95/100 Intelligence Score**: Exceptional self-awareness and system intelligence
+### 🔧 Enterprise Infrastructure (NEW!)
+- **TypeScript Core**: Full TypeScript migration with modern build systems
+- **USB Hot-Plug**: Real-time device detection with <50ms latency
+- **Plugin System**: Secure VM2 sandbox with hot-swap capabilities
+- **BullMQ Queues**: Scalable job processing with multi-queue support
+- **GraphQL Federation**: WunderGraph Cosmo with JWT authentication
+- **Multi-UI System**: Admin, Dev Studio, and User interfaces
 
-### 🚀 Zero-Config Installation (NEW!)
-- **One-Command Setup**: `curl -sSL https://get.autoweave.ai | bash --deploy-agents`
-- **Multi-Platform**: Linux, macOS, Windows (WSL) support
-- **Auto-Agent Deployment**: All 6 intelligence agents deployed automatically
-- **Production Ready**: Enterprise-grade setup with monitoring and security
+### 📊 Production Observability (NEW!)
+- **OpenTelemetry**: Distributed tracing with <1% overhead
+- **Grafana Stack**: Tempo, Loki, Prometheus integration
+- **SLI/SLO Monitoring**: Real-time compliance tracking
+- **Tenant Isolation**: Multi-tenant security and monitoring
+- **Performance Intelligence**: Automatic optimization recommendations
 
 ### 🧠 Intelligent Agent Creation
 - **Natural Language Processing**: Describe agents in plain English
@@ -68,22 +75,17 @@ AutoWeave handles the complexity—you focus on the vision.
 - **Continuous Learning**: Agents that improve over time
 - **Redis ML Cache**: Intelligent caching with pattern recognition
 
-### 🐛 Advanced Debugging
-- **OpenTelemetry Integration**: Distributed tracing and metrics
-- **Intelligent Diagnosis**: AI-powered issue analysis
-- **Real-time Monitoring**: Live agent health tracking
-
 ### 🎛️ Multiple Interfaces
-- **ChatUI**: Modern web interface (Port 5173)
-- **SillyTavern**: Conversational agent creation (Port 8081)
-- **Appsmith**: Visual dashboard (Port 8080)
-- **AG-UI**: Dynamic WebSocket UI generation
+- **Admin UI**: Management interface (Next.js 15)
+- **Dev Studio**: Development tools (Next.js 15)
+- **User UI**: End-user interface (Next.js 15)
+- **GraphQL Playground**: API testing and exploration
 
 ### ⚡ Enterprise Ready
 - **Kubernetes Native**: Built for cloud-scale deployment
-- **GitOps Integration**: Automated deployment pipelines
-- **Real-time Monitoring**: Prometheus metrics and observability
-- **Security First**: RBAC, network policies, secret management
+- **Security First**: RBAC, JWT auth, tenant isolation
+- **Multi-Architecture**: Docker builds for x86_64 and ARM64
+- **Quality Engineering**: SonarCloud integration with 60% test coverage
 
 ## 📦 Monorepo Structure
 
@@ -91,43 +93,51 @@ AutoWeave is organized as a modular monorepo with specialized packages:
 
 ```
 packages/
-├── core/           # Core engine and orchestration
-├── memory/         # Hybrid memory system (mem0 + Memgraph)
-├── integrations/   # MCP, ANP, and kagent integrations
-├── agents/         # Collection of intelligent agents
-├── backend/        # API server and routes
-├── cli/            # Command-line interface
-├── deployment/     # Kubernetes manifests and Helm charts
-└── shared/         # Shared utilities and types
+├── core/                   # Core engine and orchestration (TypeScript)
+├── memory/                 # Hybrid memory system (mem0 + Memgraph)
+├── agents/                 # Collection of intelligent agents
+├── usb-daemon/            # USB hot-plug detection system
+├── plugin-loader/         # Secure plugin loading with VM2 sandbox
+├── job-queue/             # BullMQ job processing system
+├── graphql-gateway/       # GraphQL federation with WunderGraph Cosmo
+├── observability/         # OpenTelemetry + Grafana stack
+├── integrations/          # MCP, ANP, and kagent integrations
+├── backend/               # API server and routes
+├── cli/                   # Command-line interface
+├── deployment/            # Kubernetes manifests and Helm charts
+└── shared/                # Shared utilities and types
+
+apps/
+├── admin-ui/              # Admin interface (Next.js 15)
+├── dev-studio/            # Development tools (Next.js 15)
+└── user-ui/               # End-user interface (Next.js 15)
 ```
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        AUTOWEAVE ECOSYSTEM                       │
+│                    AUTOWEAVE ECOSYSTEM v2.0                     │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
-│  │   AutoWeave     │  │  Integration    │  │     kagent      │  │
-│  │   Core Engine   │──│  Agent Module   │──│   Runtime       │  │
-│  │                 │  │                 │  │                 │  │
-│  │ • Agent Weaver  │  │ • OpenAPI Parse │  │ • K8s Deploy    │  │
-│  │ • MCP Discovery │  │ • Pydantic Gen  │  │ • Pod Mgmt      │  │
-│  │ • ANP Server    │  │ • GitOps Flow   │  │ • Observability │  │
+│  │   Next.js 15    │  │   GraphQL       │  │  Observability  │  │
+│  │   Frontend      │──│   Gateway       │──│  Stack (OTel)   │  │
+│  │   (3 Apps)      │  │  (WunderGraph)  │  │  (Grafana)      │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 │           │                     │                     │         │
-│           └─────────────────────┼─────────────────────┘         │
-│                                 │                               │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │   USB Daemon    │  │   Plugin        │  │   BullMQ        │  │
+│  │   (Hot-Plug)    │──│   Loader        │──│   Queues        │  │
+│  │   <50ms         │  │   (VM2)         │  │   (Redis)       │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
+│           │                     │                     │         │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │                      USER INTERFACES                        │  │
+│  │                    CORE AUTOWEAVE ENGINE                    │  │
 │  │                                                             │  │
 │  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
-│  │  │   ChatUI        │  │   SillyTavern   │  │    Appsmith     │  │
-│  │  │ (Port 5173)     │  │  (Port 8081)    │  │  (Port 8080)    │  │
-│  │  │                 │  │                 │  │                 │  │
-│  │  │ • Web Interface │  │ • Chat-based    │  │ • Dashboard     │  │
-│  │  │ • Direct API    │  │ • Extensions    │  │ • Monitoring    │  │
-│  │  │ • OpenAI Compat │  │ • Slash Cmds    │  │ • Management    │  │
+│  │  │   TypeScript    │  │   Memory        │  │   Agents        │  │
+│  │  │   Core          │  │   System        │  │   Runtime       │  │
+│  │  │   (Orchestration)│  │   (Hybrid)      │  │   (Sub-Agents)  │  │
 │  │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                 │                               │
@@ -135,12 +145,12 @@ packages/
 │  │                   KUBERNETES CLUSTER                        │  │
 │  │                                                             │  │
 │  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
-│  │  │  Regular Agents │  │ Integration     │  │   Services      │  │
-│  │  │  (AutoWeave)    │  │ Agents (APIs)   │  │  (Support)      │  │
+│  │  │  Intelligence   │  │  Infrastructure │  │   Services      │  │
+│  │  │  Agents         │  │  Components     │  │  (Support)      │  │
 │  │  │                 │  │                 │  │                 │  │
-│  │  │ • NL Generated  │  │ • OpenAPI Based │  │ • Qdrant/Vector │  │
-│  │  │ • Custom Logic  │  │ • Pydantic      │  │ • Memgraph      │  │
-│  │  │ • Task Specific │  │ • Auto-validated│  │ • Prometheus    │  │
+│  │  │ • Multi-Agent   │  │ • Docker Images │  │ • Tempo/Loki    │  │
+│  │  │ • Orchestration │  │ • Helm Charts   │  │ • Prometheus    │  │
+│  │  │ • Production    │  │ • Multi-Arch    │  │ • Quality Gates │  │
 │  │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 │  └─────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -162,18 +172,20 @@ packages/
 
 ### Key URLs
 - **AutoWeave API**: http://localhost:3000/api
-- **ChatUI Interface**: http://localhost:5173
+- **Admin UI**: http://localhost:3001
+- **Dev Studio**: http://localhost:3002
+- **User UI**: http://localhost:3003
+- **GraphQL Gateway**: http://localhost:4000
 - **ANP Server**: http://localhost:8083
 - **AG-UI WebSocket**: ws://localhost:3000/ws
-- **SillyTavern**: http://localhost:8081
-- **Appsmith Dashboard**: http://localhost:8080
 
 ## 🛠️ Prerequisites
 
 - **Node.js**: 18.0.0 or higher
-- **Python**: 3.8+ (for mem0 self-hosted)
+- **TypeScript**: 5.0+ (automatically installed)
 - **Docker**: 20.0.0 or higher
 - **Kubernetes cluster**: Local (Kind) or remote
+- **Redis**: For BullMQ queues and caching
 - **OpenAI API Key**: For agent generation and embeddings
 
 ## 📦 Installation
@@ -282,22 +294,27 @@ npx autoweave integrate-helm https://charts.bitnami.com/bitnami/postgresql
 
 ### Available Interfaces
 
-1. **ChatUI** (http://localhost:5173)
-   - Modern web interface
-   - OpenAI-compatible API
-   - Real-time agent creation
+1. **Admin UI** (http://localhost:3001)
+   - System administration and configuration
+   - User management and permissions
+   - Infrastructure monitoring
 
-2. **SillyTavern** (http://localhost:8081)
-   - Conversational interface
-   - Slash commands for agent control
-   - Extension support
+2. **Dev Studio** (http://localhost:3002)
+   - Agent development and testing
+   - Plugin management
+   - Performance profiling
 
-3. **Appsmith Dashboard** (http://localhost:8080)
-   - Visual agent management
-   - Monitoring and metrics
-   - Configuration UI
+3. **User UI** (http://localhost:3003)
+   - End-user agent interaction
+   - Task management
+   - Results visualization
 
-4. **ANP Server** (http://localhost:8083)
+4. **GraphQL Gateway** (http://localhost:4000)
+   - Unified API endpoint
+   - Real-time subscriptions
+   - GraphQL Playground
+
+5. **ANP Server** (http://localhost:8083)
    - Agent discovery
    - Task management
    - OpenAPI validation
@@ -317,13 +334,13 @@ Transforms natural language descriptions into executable agent workflows using a
 - **MCP (Model Context Protocol)**: Integration with AI models
 - **AG-UI (Agent GUI)**: Dynamic UI generation via WebSocket
 
-### Pre-built Agents
-1. **Debugging Agent**: OpenTelemetry-based system diagnostics
-2. **Self-Awareness Agent**: System monitoring and optimization
-3. **Integration Agent**: API and service integration
-4. **Configuration Intelligence**: Smart configuration generation
-5. **Security Agent**: Security scanning and compliance
-6. **Performance Agent**: Performance monitoring and optimization
+### Pre-built Systems
+1. **USB Daemon**: Real-time device detection and management
+2. **Plugin Loader**: Secure plugin execution in VM2 sandbox
+3. **BullMQ Queues**: Distributed job processing system
+4. **GraphQL Gateway**: Federated API with authentication
+5. **Observability Stack**: OpenTelemetry + Grafana monitoring
+6. **Multi-UI System**: Admin, Dev Studio, and User interfaces
 
 ## 🔧 Development
 
@@ -392,20 +409,21 @@ npm run start:prod
 - Basic protocol support
 - CLI and Web UI
 
-### Phase 2: Enhancement (🚧 In Progress)
-- Advanced agent templates
-- Enhanced UI/UX
-- Performance optimizations
-- Extended protocol support
-- Integration Agent Module
-- ANP & AG-UI implementation
+### Phase 2: Enterprise Infrastructure (✅ Complete)
+- TypeScript migration with modern build systems
+- USB hot-plug detection with <50ms latency
+- Plugin system with VM2 sandbox security
+- BullMQ job queues with Redis backend
+- GraphQL federation with WunderGraph Cosmo
+- OpenTelemetry observability with <1% overhead
+- Multi-UI system with Next.js 15
 
 ### Phase 3: Ecosystem (📅 Planned)
-- Plugin architecture
-- Marketplace for agents
-- Enterprise features
-- Cloud deployment options
-- Multi-cloud support
+- Plugin marketplace and discovery
+- Advanced AI agent templates
+- Multi-cloud deployment options
+- Enterprise security features
+- Advanced analytics and insights
 
 ## 🤝 Community
 

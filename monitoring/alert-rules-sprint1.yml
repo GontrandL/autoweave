@@ -1,0 +1,183 @@
+groups:
+  - name: sprint1_performance_alerts
+    interval: 30s
+    rules:
+      - alert: HighUSBEventLatency
+        expr: histogram_quantile(0.95, rate(usb_event_latency_bucket[5m])) > 80
+        for: 2m
+        labels:
+          severity: warning
+          component: usb-daemon
+          sprint: "1"
+        annotations:
+          summary: "USB event latency is high"
+          description: "USB event P95 latency is {{ $value }}ms, above the 80ms warning threshold"
+          runbook_url: "https://docs.autoweave.com/runbooks/usb-latency"
+
+      - alert: CriticalUSBEventLatency
+        expr: histogram_quantile(0.95, rate(usb_event_latency_bucket[5m])) > 100
+        for: 1m
+        labels:
+          severity: critical
+          component: usb-daemon
+          sprint: "1"
+        annotations:
+          summary: "USB event latency is critically high"
+          description: "USB event P95 latency is {{ $value }}ms, above the 100ms critical threshold"
+          runbook_url: "https://docs.autoweave.com/runbooks/usb-latency"
+
+      - alert: SlowPluginLoading
+        expr: histogram_quantile(0.95, rate(plugin_load_time_bucket[5m])) > 200
+        for: 2m
+        labels:
+          severity: warning
+          component: plugin-loader
+          sprint: "1"
+        annotations:
+          summary: "Plugin loading is slow"
+          description: "Plugin load P95 time is {{ $value }}ms, above the 200ms warning threshold"
+          runbook_url: "https://docs.autoweave.com/runbooks/plugin-loading"
+
+      - alert: CriticalPluginLoadTime
+        expr: histogram_quantile(0.95, rate(plugin_load_time_bucket[5m])) > 250
+        for: 1m
+        labels:
+          severity: critical
+          component: plugin-loader
+          sprint: "1"
+        annotations:
+          summary: "Plugin loading is critically slow"
+          description: "Plugin load P95 time is {{ $value }}ms, above the 250ms critical threshold"
+          runbook_url: "https://docs.autoweave.com/runbooks/plugin-loading"
+
+      - alert: MemoryLeakDetected
+        expr: increase(nodejs_heap_size_used_bytes[1h]) / 1024 / 1024 > 100
+        for: 5m
+        labels:
+          severity: critical
+          component: memory
+          sprint: "1"
+        annotations:
+          summary: "Potential memory leak detected"
+          description: "Memory usage increased by {{ $value }}MB in the last hour"
+          runbook_url: "https://docs.autoweave.com/runbooks/memory-leak"
+
+      - alert: HighMemoryUsage
+        expr: nodejs_heap_size_used_bytes / nodejs_heap_size_total_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: memory
+          sprint: "1"
+        annotations:
+          summary: "High memory usage detected"
+          description: "Heap usage is {{ $value | humanizePercentage }} of total heap"
+          runbook_url: "https://docs.autoweave.com/runbooks/high-memory"
+
+      - alert: SlowShutdown
+        expr: shutdown_time_seconds > 3
+        for: 0s
+        labels:
+          severity: warning
+          component: shutdown
+          sprint: "1"
+        annotations:
+          summary: "Slow graceful shutdown"
+          description: "Shutdown took {{ $value }}s, above the 3s warning threshold"
+          runbook_url: "https://docs.autoweave.com/runbooks/slow-shutdown"
+
+      - alert: CriticalShutdownTime
+        expr: shutdown_time_seconds > 5
+        for: 0s
+        labels:
+          severity: critical
+          component: shutdown
+          sprint: "1"
+        annotations:
+          summary: "Critically slow shutdown"
+          description: "Shutdown took {{ $value }}s, above the 5s critical threshold"
+          runbook_url: "https://docs.autoweave.com/runbooks/slow-shutdown"
+
+      - alert: HighErrorRate
+        expr: rate(errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: general
+          sprint: "1"
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors per second"
+          runbook_url: "https://docs.autoweave.com/runbooks/high-errors"
+
+      - alert: WorkerPoolExhausted
+        expr: worker_pool_queue_size > 10
+        for: 1m
+        labels:
+          severity: warning
+          component: worker-pool
+          sprint: "1"
+        annotations:
+          summary: "Worker pool queue is backing up"
+          description: "Worker pool queue size is {{ $value }}, may need more workers"
+          runbook_url: "https://docs.autoweave.com/runbooks/worker-pool"
+
+      - alert: LowCacheHitRate
+        expr: manifest_cache_hit_rate < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+          sprint: "1"
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Manifest cache hit rate is {{ $value | humanizePercentage }}, may need tuning"
+          runbook_url: "https://docs.autoweave.com/runbooks/cache-performance"
+
+      - alert: ComponentDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: availability
+          sprint: "1"
+        annotations:
+          summary: "Component is down"
+          description: "{{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://docs.autoweave.com/runbooks/component-down"
+
+  - name: sprint1_capacity_alerts
+    interval: 60s
+    rules:
+      - alert: EventRateIncreasing
+        expr: rate(usb_events_processed_total[10m]) > rate(usb_events_processed_total[1h])
+        for: 10m
+        labels:
+          severity: info
+          component: capacity
+          sprint: "1"
+        annotations:
+          summary: "USB event rate is increasing"
+          description: "Event processing rate has increased, monitor for capacity needs"
+
+      - alert: PluginLoadRateHigh
+        expr: rate(plugin_loads_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: info
+          component: capacity
+          sprint: "1"
+        annotations:
+          summary: "High plugin load rate"
+          description: "Plugins are being loaded at {{ $value }} per second"
+
+      - alert: CacheEvictionHigh
+        expr: rate(cache_evictions_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+          sprint: "1"
+        annotations:
+          summary: "High cache eviction rate"
+          description: "Cache evictions are happening at {{ $value }} per second, consider increasing cache size"

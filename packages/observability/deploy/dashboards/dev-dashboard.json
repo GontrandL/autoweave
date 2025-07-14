@@ -1,0 +1,513 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AutoWeave - Developer Dashboard",
+    "tags": ["autoweave", "development", "debugging"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "description": "Developer-focused dashboard for debugging and performance analysis",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=~\"autoweave.*\"}",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 1
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background"
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+        "description": "Overall system health status"
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "xAxes": [
+          {
+            "show": true,
+            "mode": "time"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 9, "x": 6, "y": 0},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "HTTP request rate by endpoint"
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(errors_total[5m])",
+            "legendFormat": "{{component}} - {{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Errors/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 6, "w": 9, "x": 15, "y": 0},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Error rate by component and type"
+      },
+      {
+        "id": 4,
+        "title": "Response Time Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_ms_bucket[5m])",
+            "legendFormat": "{{le}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "heatmap": {
+          "yAxis": {
+            "min": 0,
+            "max": 1000,
+            "unit": "ms"
+          },
+          "xAxis": {
+            "show": true
+          }
+        },
+        "description": "Distribution of HTTP response times over time"
+      },
+      {
+        "id": 5,
+        "title": "Top Slow Endpoints",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, histogram_quantile(0.95, rate(http_request_duration_ms_bucket[5m])))",
+            "legendFormat": "{{route}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "description": "Top 10 slowest endpoints (P95 latency)"
+      },
+      {
+        "id": 6,
+        "title": "USB Event Processing",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(usb_events_total[5m])",
+            "legendFormat": "{{action}} - {{vendor_id}}:{{product_id}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 14},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "USB event processing rate by device type"
+      },
+      {
+        "id": 7,
+        "title": "USB Event Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(usb_event_processing_duration_ms_bucket[5m]))",
+            "legendFormat": "P95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(usb_event_processing_duration_ms_bucket[5m]))",
+            "legendFormat": "P50",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(usb_event_processing_duration_ms_bucket[5m]))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Milliseconds",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 14},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "USB event processing latency percentiles"
+      },
+      {
+        "id": 8,
+        "title": "Plugin Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(plugin_load_duration_ms_bucket[5m]))",
+            "legendFormat": "Load Time P95",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(plugin_executions_total[5m])",
+            "legendFormat": "Execution Rate",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Milliseconds",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          },
+          {
+            "label": "Executions/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true,
+            "opposite": true
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 20},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Plugin load time and execution rate"
+      },
+      {
+        "id": 9,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "nodejs_heap_size_used_bytes",
+            "legendFormat": "Heap Used",
+            "refId": "A"
+          },
+          {
+            "expr": "nodejs_heap_size_total_bytes",
+            "legendFormat": "Heap Total",
+            "refId": "B"
+          },
+          {
+            "expr": "process_resident_memory_bytes",
+            "legendFormat": "Resident Memory",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Bytes",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 20},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Memory usage breakdown"
+      },
+      {
+        "id": 10,
+        "title": "Garbage Collection",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(gc_duration_ms_sum[5m])",
+            "legendFormat": "GC Duration",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(gc_runs_total[5m])",
+            "legendFormat": "GC Frequency",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Milliseconds",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          },
+          {
+            "label": "GC Runs/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true,
+            "opposite": true
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 26},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Garbage collection impact on performance"
+      },
+      {
+        "id": 11,
+        "title": "Event Loop Lag",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(event_loop_lag_ms_bucket[5m]))",
+            "legendFormat": "Event Loop Lag P95",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Milliseconds",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 26},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Event loop lag indicating blocking operations"
+      },
+      {
+        "id": 12,
+        "title": "Recent Errors",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job=\"autoweave\",level=\"error\"}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
+        "options": {
+          "showLabels": true,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": true
+        },
+        "description": "Recent error logs for debugging"
+      },
+      {
+        "id": 13,
+        "title": "Trace Samples",
+        "type": "trace",
+        "targets": [
+          {
+            "expr": "tempo",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 40},
+        "description": "Recent trace samples for performance analysis"
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "component",
+          "type": "query",
+          "query": "label_values(up, job)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "type": "query",
+          "query": "label_values(tenant_operations_total, tenant_id)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "increase(deployments_total[1m])",
+          "iconColor": "green",
+          "titleFormat": "Deployment"
+        },
+        {
+          "name": "Alerts",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "iconColor": "red",
+          "titleFormat": "Alert: {{alertname}}"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": ["autoweave"],
+        "title": "Operations Dashboard",
+        "type": "dashboards",
+        "url": "/d/ops/autoweave-operations"
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": ["autoweave"],
+        "title": "Business Dashboard",
+        "type": "dashboards",
+        "url": "/d/business/autoweave-business"
+      }
+    ]
+  }
+}

@@ -1,0 +1,594 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AutoWeave - Business Dashboard",
+    "tags": ["autoweave", "business", "metrics", "tenants"],
+    "timezone": "browser",
+    "refresh": "5m",
+    "schemaVersion": 27,
+    "version": 1,
+    "description": "Business-focused dashboard for tenant activity and operational metrics",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Tenants",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(count by (tenant_id) (rate(tenant_operations_total[5m]) > 0))",
+            "legendFormat": "Active Tenants",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value"
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+        "description": "Number of tenants with recent activity"
+      },
+      {
+        "id": 2,
+        "title": "Total Operations",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(business_operations_total[5m]))",
+            "legendFormat": "Operations/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "ops"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value"
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+        "description": "Total business operations per second"
+      },
+      {
+        "id": 3,
+        "title": "Plugin Executions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(plugin_executions_total[5m]))",
+            "legendFormat": "Executions/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "ops"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value"
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+        "description": "Total plugin executions per second"
+      },
+      {
+        "id": 4,
+        "title": "Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(business_operations_total{success=\"true\"}[5m])) / sum(rate(business_operations_total[5m]))",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.95},
+                {"color": "green", "value": 0.99}
+              ]
+            },
+            "unit": "percentunit"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background"
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+        "description": "Overall success rate of business operations"
+      },
+      {
+        "id": 5,
+        "title": "Tenant Activity",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (tenant_id) (rate(tenant_operations_total[5m]))",
+            "legendFormat": "{{tenant_id}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Operations/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Activity level by tenant"
+      },
+      {
+        "id": 6,
+        "title": "Operation Types",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (operation) (rate(business_operations_total[5m]))",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "description": "Distribution of operation types"
+      },
+      {
+        "id": 7,
+        "title": "Plugin Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (plugin_name) (rate(plugin_executions_total[5m]))",
+            "legendFormat": "{{plugin_name}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Executions/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Plugin usage by plugin name"
+      },
+      {
+        "id": 8,
+        "title": "Plugin Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (plugin_name) (rate(plugin_executions_total{success=\"true\"}[5m])) / sum by (plugin_name) (rate(plugin_executions_total[5m]))",
+            "legendFormat": "{{plugin_name}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Success Rate",
+            "min": 0,
+            "max": 1,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Success rate by plugin"
+      },
+      {
+        "id": 9,
+        "title": "Automation Tasks",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (task_type) (rate(automation_tasks_total[5m]))",
+            "legendFormat": "{{task_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Tasks/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Automation task execution rate by type"
+      },
+      {
+        "id": 10,
+        "title": "Automation Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (task_type) (rate(automation_tasks_total{success=\"true\"}[5m])) / sum by (task_type) (rate(automation_tasks_total[5m]))",
+            "legendFormat": "{{task_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Success Rate",
+            "min": 0,
+            "max": 1,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Success rate by automation task type"
+      },
+      {
+        "id": 11,
+        "title": "Top Active Tenants",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (tenant_id) (rate(tenant_operations_total[1h])))",
+            "legendFormat": "{{tenant_id}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+        "description": "Top 10 most active tenants in the last hour"
+      },
+      {
+        "id": 12,
+        "title": "Revenue Impact",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (tenant_id) (rate(business_operations_total[5m]) * on(tenant_id) group_left() tenant_pricing_rate)",
+            "legendFormat": "{{tenant_id}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Revenue/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Revenue impact by tenant (operations * pricing)"
+      },
+      {
+        "id": 13,
+        "title": "Device Usage Patterns",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (vendor_id, product_id) (rate(usb_events_total[5m]))",
+            "legendFormat": "{{vendor_id}}:{{product_id}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 38},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "USB device usage patterns by device type"
+      },
+      {
+        "id": 14,
+        "title": "Service Level Compliance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "slo_compliance_percentage",
+            "legendFormat": "{{slo_name}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Compliance %",
+            "min": 0,
+            "max": 100,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 38},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "SLO compliance percentage over time"
+      },
+      {
+        "id": 15,
+        "title": "Tenant Resource Consumption",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (tenant_id) (rate(tenant_operations_total[1h]))",
+            "legendFormat": "Operations/hr",
+            "refId": "A"
+          },
+          {
+            "expr": "sum by (tenant_id) (rate(plugin_executions_total[1h]))",
+            "legendFormat": "Plugin Executions/hr",
+            "refId": "B"
+          },
+          {
+            "expr": "sum by (tenant_id) (rate(automation_tasks_total[1h]))",
+            "legendFormat": "Automation Tasks/hr",
+            "refId": "C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 46},
+        "description": "Resource consumption by tenant over the last hour"
+      },
+      {
+        "id": 16,
+        "title": "Growth Trends",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(tenant_operations_total[1d])",
+            "legendFormat": "Daily Operations",
+            "refId": "A"
+          },
+          {
+            "expr": "increase(plugin_executions_total[1d])",
+            "legendFormat": "Daily Plugin Executions",
+            "refId": "B"
+          },
+          {
+            "expr": "increase(automation_tasks_total[1d])",
+            "legendFormat": "Daily Automation Tasks",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Daily Count",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 54},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Growth trends over time"
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "tenant_id",
+          "type": "query",
+          "query": "label_values(tenant_operations_total, tenant_id)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        },
+        {
+          "name": "operation",
+          "type": "query",
+          "query": "label_values(business_operations_total, operation)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        },
+        {
+          "name": "plugin_name",
+          "type": "query",
+          "query": "label_values(plugin_executions_total, plugin_name)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "New Tenant Onboarding",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "increase(tenant_onboarding_total[1m])",
+          "iconColor": "blue",
+          "titleFormat": "New Tenant: {{tenant_id}}"
+        },
+        {
+          "name": "Feature Launches",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "increase(feature_launches_total[1m])",
+          "iconColor": "green",
+          "titleFormat": "Feature Launch: {{feature_name}}"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": ["autoweave"],
+        "title": "Developer Dashboard",
+        "type": "dashboards",
+        "url": "/d/dev/autoweave-developer"
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": ["autoweave"],
+        "title": "Operations Dashboard",
+        "type": "dashboards",
+        "url": "/d/ops/autoweave-operations"
+      }
+    ]
+  }
+}

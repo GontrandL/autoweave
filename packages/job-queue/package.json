@@ -1,0 +1,80 @@
+{
+  "name": "@autoweave/job-queue",
+  "version": "1.0.0",
+  "description": "AutoWeave Enhanced Job Queue with BullMQ, multi-queue support, and production features",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "bullmq": "^4.15.1",
+    "ioredis": "^5.3.2",
+    "vm2": "^3.9.19",
+    "eventemitter3": "^5.0.1",
+    "pino": "^8.16.1",
+    "uuid": "^9.0.1",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.7",
+    "@types/uuid": "^9.0.7",
+    "@types/node-cron": "^3.0.11",
+    "typescript": "^5.6.3",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8",
+    "ts-jest": "^29.1.1",
+    "eslint": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "tsup": "^8.0.1"
+  },
+  "peerDependencies": {
+    "@autoweave/usb-daemon": "workspace:*",
+    "@autoweave/plugin-loader": "workspace:*",
+    "@autoweave/memory": "workspace:*",
+    "@autoweave/observability": "workspace:*"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "queue",
+    "bullmq",
+    "redis",
+    "jobs",
+    "autoweave",
+    "workers",
+    "processing",
+    "usb",
+    "plugins"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autoweave/autoweave.git",
+    "directory": "packages/job-queue"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

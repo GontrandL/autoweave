@@ -8,6 +8,13 @@ packages:
   - 'packages/cli'
   - 'packages/integrations'
   - 'packages/deployment'
+  - 'packages/job-queue'
+  
+  # Infrastructure packages
+  - 'packages/usb-daemon'
+  - 'packages/plugin-loader'
+  - 'packages/observability'
+  - 'packages/queue'
   
   # Shared packages
   - 'packages/shared/*'

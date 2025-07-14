@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  admin-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: admin-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
+      - NEXT_PUBLIC_GRAPHQL_WS_URL=ws://localhost:4000/graphql
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8080
+    depends_on:
+      - graphql-gateway
+    networks:
+      - autoweave-network
+
+  dev-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: dev-studio
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
+      - NEXT_PUBLIC_GRAPHQL_WS_URL=ws://localhost:4000/graphql
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8080
+    depends_on:
+      - graphql-gateway
+    networks:
+      - autoweave-network
+
+  user-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: user-ui
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
+      - NEXT_PUBLIC_GRAPHQL_WS_URL=ws://localhost:4000/graphql
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8080
+    depends_on:
+      - graphql-gateway
+    networks:
+      - autoweave-network
+
+  graphql-gateway:
+    image: autoweave/graphql-gateway:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgres://postgres:password@postgres:5432/autoweave
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - autoweave-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - autoweave-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=autoweave
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - autoweave-network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  autoweave-network:
+    driver: bridge

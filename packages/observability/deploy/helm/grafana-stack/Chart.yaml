@@ -1,0 +1,42 @@
+apiVersion: v2
+name: autoweave-grafana-stack
+description: Complete Grafana Stack for AutoWeave observability (Tempo, Loki, Grafana, Prometheus)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/autoweave/autoweave
+sources:
+  - https://github.com/autoweave/autoweave
+maintainers:
+  - name: AutoWeave Team
+    email: team@autoweave.com
+
+dependencies:
+  - name: grafana
+    version: 6.50.0
+    repository: https://grafana.github.io/helm-charts
+    condition: grafana.enabled
+  - name: tempo
+    version: 1.0.0
+    repository: https://grafana.github.io/helm-charts
+    condition: tempo.enabled
+  - name: loki
+    version: 4.0.0
+    repository: https://grafana.github.io/helm-charts
+    condition: loki.enabled
+  - name: prometheus
+    version: 19.0.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: prometheus.enabled
+
+keywords:
+  - observability
+  - monitoring
+  - tracing
+  - logging
+  - metrics
+  - grafana
+  - tempo
+  - loki
+  - prometheus
+  - autoweave

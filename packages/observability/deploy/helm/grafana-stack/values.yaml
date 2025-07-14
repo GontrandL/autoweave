@@ -1,0 +1,600 @@
+# AutoWeave Grafana Stack Configuration
+global:
+  # Tenant isolation settings
+  tenantId: "default"
+  environment: "production"
+  
+  # Resource limits for production
+  resources:
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+  
+  # Storage settings
+  storage:
+    storageClass: "fast-ssd"
+    size: "50Gi"
+    
+  # Security settings
+  security:
+    enabled: true
+    rbacEnabled: true
+    podSecurityPolicy: true
+    
+  # Networking
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - grafana.autoweave.com
+      - tempo.autoweave.com
+      - loki.autoweave.com
+    tls:
+      - secretName: grafana-stack-tls
+        hosts:
+          - grafana.autoweave.com
+          - tempo.autoweave.com
+          - loki.autoweave.com
+
+# Grafana Configuration
+grafana:
+  enabled: true
+  
+  # Admin credentials
+  adminUser: admin
+  adminPassword: "changeme-secure-password"
+  
+  # Persistence
+  persistence:
+    enabled: true
+    storageClassName: "fast-ssd"
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+  
+  # Resources
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  # Grafana configuration
+  grafana.ini:
+    server:
+      root_url: "https://grafana.autoweave.com"
+      serve_from_sub_path: false
+    auth:
+      disable_login_form: false
+      disable_signout_menu: false
+    auth.anonymous:
+      enabled: false
+    security:
+      admin_password: "changeme-secure-password"
+      secret_key: "changeme-secret-key"
+    database:
+      type: postgres
+      host: "postgres:5432"
+      name: grafana
+      user: grafana
+      password: "changeme-db-password"
+    session:
+      provider: postgres
+      provider_config: "user=grafana password=changeme-db-password host=postgres port=5432 dbname=grafana sslmode=disable"
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+    log:
+      mode: console
+      level: info
+    metrics:
+      enabled: true
+  
+  # Datasources
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus:9090
+          access: proxy
+          isDefault: false
+        - name: Tempo
+          type: tempo
+          url: http://tempo:3100
+          access: proxy
+          isDefault: false
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+          access: proxy
+          isDefault: false
+  
+  # Dashboards
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'autoweave-dashboards'
+          orgId: 1
+          folder: 'AutoWeave'
+          type: file
+          disableDeletion: false
+          updateIntervalSeconds: 10
+          allowUiUpdates: true
+          options:
+            path: /var/lib/grafana/dashboards/autoweave
+  
+  # Dashboard ConfigMaps
+  dashboards:
+    autoweave-dashboards:
+      autoweave-overview:
+        gnetId: 1
+        revision: 1
+        datasource: Prometheus
+      autoweave-usb-daemon:
+        gnetId: 2
+        revision: 1
+        datasource: Prometheus
+      autoweave-plugin-loader:
+        gnetId: 3
+        revision: 1
+        datasource: Prometheus
+      autoweave-traces:
+        gnetId: 4
+        revision: 1
+        datasource: Tempo
+      autoweave-logs:
+        gnetId: 5
+        revision: 1
+        datasource: Loki
+  
+  # Alerting
+  alerting:
+    enabled: true
+    rules:
+      groups:
+        - name: autoweave-alerts
+          rules:
+            - alert: AutoWeaveHighErrorRate
+              expr: rate(autoweave_errors_total[5m]) > 0.1
+              for: 2m
+              labels:
+                severity: warning
+              annotations:
+                summary: "High error rate in AutoWeave"
+                description: "Error rate is {{ $value }} errors per second"
+            - alert: AutoWeaveComponentDown
+              expr: up{job="autoweave"} == 0
+              for: 1m
+              labels:
+                severity: critical
+              annotations:
+                summary: "AutoWeave component is down"
+                description: "{{ $labels.instance }} has been down for more than 1 minute"
+
+# Tempo Configuration (Distributed Tracing)
+tempo:
+  enabled: true
+  
+  # Tempo configuration
+  tempo:
+    repository: grafana/tempo
+    tag: 2.0.0
+    
+    # Storage backend
+    storage:
+      trace:
+        backend: s3
+        s3:
+          bucket: autoweave-traces
+          endpoint: s3.amazonaws.com
+          access_key: changeme
+          secret_key: changeme
+          insecure: false
+    
+    # Retention policies
+    retention:
+      traces: 168h  # 7 days
+      
+    # Limits
+    limits:
+      per_tenant_override_config: |
+        overrides:
+          default:
+            ingestion_rate_limit: 10000
+            ingestion_burst_limit: 20000
+            max_traces_per_user: 10000
+            max_bytes_per_trace: 50000000
+  
+  # Resources
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  
+  # Persistence
+  persistence:
+    enabled: true
+    storageClassName: "fast-ssd"
+    size: 50Gi
+    accessModes:
+      - ReadWriteOnce
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    annotations: {}
+    ports:
+      - name: tempo-prom-metrics
+        port: 3100
+        targetPort: 3100
+      - name: tempo-jaeger-thrift-compact
+        port: 6831
+        targetPort: 6831
+        protocol: UDP
+      - name: tempo-jaeger-thrift-binary
+        port: 6832
+        targetPort: 6832
+        protocol: UDP
+      - name: tempo-jaeger-grpc
+        port: 14250
+        targetPort: 14250
+      - name: tempo-jaeger-thrift-http
+        port: 14268
+        targetPort: 14268
+      - name: tempo-zipkin
+        port: 9411
+        targetPort: 9411
+      - name: tempo-otlp-grpc
+        port: 4317
+        targetPort: 4317
+      - name: tempo-otlp-http
+        port: 4318
+        targetPort: 4318
+
+# Loki Configuration (Log Aggregation)
+loki:
+  enabled: true
+  
+  # Loki configuration
+  loki:
+    image:
+      repository: grafana/loki
+      tag: 2.8.0
+    
+    # Storage configuration
+    storage:
+      type: s3
+      s3:
+        s3: s3://autoweave-logs
+        region: us-east-1
+        access_key_id: changeme
+        secret_access_key: changeme
+    
+    # Schema configuration
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: s3
+          schema: v11
+          index:
+            prefix: autoweave_index_
+            period: 24h
+    
+    # Limits
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      ingestion_rate_mb: 10
+      ingestion_burst_size_mb: 20
+      per_stream_rate_limit: 3MB
+      per_stream_rate_limit_burst: 15MB
+      max_concurrent_tail_requests: 10
+      max_cache_freshness_per_query: 10m
+      max_streams_per_user: 10000
+      max_line_size: 256000
+      retention_period: 168h  # 7 days
+    
+    # Chunk store configuration
+    chunk_store_config:
+      max_look_back_period: 0s
+      chunk_cache_config:
+        redis:
+          endpoint: redis:6379
+          timeout: 100ms
+          expiration: 1h
+    
+    # Table manager
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 168h
+  
+  # Resources
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  
+  # Persistence
+  persistence:
+    enabled: true
+    storageClassName: "fast-ssd"
+    size: 50Gi
+    accessModes:
+      - ReadWriteOnce
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 3100
+    annotations: {}
+
+# Prometheus Configuration (Metrics)
+prometheus:
+  enabled: true
+  
+  # Prometheus server configuration
+  server:
+    image:
+      repository: prom/prometheus
+      tag: v2.40.0
+    
+    # Retention
+    retention: "7d"
+    
+    # Storage
+    persistentVolume:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: 50Gi
+      accessModes:
+        - ReadWriteOnce
+    
+    # Resources
+    resources:
+      limits:
+        cpu: 2
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+    # Configuration
+    configMapOverrides:
+      prometheus.yml: |
+        global:
+          scrape_interval: 15s
+          evaluation_interval: 15s
+        
+        rule_files:
+          - "/etc/prometheus/rules/*.yml"
+        
+        scrape_configs:
+          - job_name: 'autoweave'
+            static_configs:
+              - targets: ['autoweave:8080']
+            scrape_interval: 15s
+            metrics_path: /metrics
+            
+          - job_name: 'autoweave-usb-daemon'
+            static_configs:
+              - targets: ['autoweave-usb-daemon:8081']
+            scrape_interval: 15s
+            metrics_path: /metrics
+            
+          - job_name: 'autoweave-plugin-loader'
+            static_configs:
+              - targets: ['autoweave-plugin-loader:8082']
+            scrape_interval: 15s
+            metrics_path: /metrics
+            
+          - job_name: 'autoweave-queue-manager'
+            static_configs:
+              - targets: ['autoweave-queue-manager:8083']
+            scrape_interval: 15s
+            metrics_path: /metrics
+        
+        alerting:
+          alertmanagers:
+            - static_configs:
+                - targets:
+                  - alertmanager:9093
+  
+  # Alertmanager configuration
+  alertmanager:
+    enabled: true
+    
+    # Persistence
+    persistentVolume:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: 10Gi
+      accessModes:
+        - ReadWriteOnce
+    
+    # Resources
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    
+    # Configuration
+    config:
+      global:
+        smtp_smarthost: 'smtp.gmail.com:587'
+        smtp_from: 'alerts@autoweave.com'
+        smtp_auth_username: 'alerts@autoweave.com'
+        smtp_auth_password: 'changeme-email-password'
+      
+      route:
+        group_by: ['alertname']
+        group_wait: 10s
+        group_interval: 10s
+        repeat_interval: 12h
+        receiver: 'default'
+        routes:
+          - match:
+              severity: critical
+            receiver: 'critical'
+          - match:
+              severity: warning
+            receiver: 'warning'
+      
+      receivers:
+        - name: 'default'
+          email_configs:
+            - to: 'team@autoweave.com'
+              subject: 'AutoWeave Alert: {{ .GroupLabels.alertname }}'
+              body: |
+                {{ range .Alerts }}
+                Alert: {{ .Annotations.summary }}
+                Description: {{ .Annotations.description }}
+                {{ end }}
+        
+        - name: 'critical'
+          email_configs:
+            - to: 'team@autoweave.com'
+              subject: 'CRITICAL AutoWeave Alert: {{ .GroupLabels.alertname }}'
+              body: |
+                {{ range .Alerts }}
+                Alert: {{ .Annotations.summary }}
+                Description: {{ .Annotations.description }}
+                {{ end }}
+          slack_configs:
+            - api_url: 'https://hooks.slack.com/services/changeme'
+              channel: '#alerts'
+              title: 'CRITICAL AutoWeave Alert'
+              text: |
+                {{ range .Alerts }}
+                {{ .Annotations.summary }}
+                {{ .Annotations.description }}
+                {{ end }}
+        
+        - name: 'warning'
+          email_configs:
+            - to: 'team@autoweave.com'
+              subject: 'WARNING AutoWeave Alert: {{ .GroupLabels.alertname }}'
+              body: |
+                {{ range .Alerts }}
+                Alert: {{ .Annotations.summary }}
+                Description: {{ .Annotations.description }}
+                {{ end }}
+
+# PostgreSQL for Grafana persistence
+postgresql:
+  enabled: true
+  auth:
+    username: grafana
+    password: changeme-db-password
+    database: grafana
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Redis for caching
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: changeme-redis-password
+  master:
+    persistence:
+      enabled: true
+      storageClass: "fast-ssd"
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Network policies for security
+networkPolicy:
+  enabled: true
+  
+# Pod security policies
+podSecurityPolicy:
+  enabled: true
+  
+# Service monitors for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    app: autoweave
+    
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: grafana.autoweave.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: grafana
+              port:
+                number: 80
+    - host: tempo.autoweave.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: tempo
+              port:
+                number: 3100
+    - host: loki.autoweave.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: loki
+              port:
+                number: 3100
+  tls:
+    - secretName: grafana-stack-tls
+      hosts:
+        - grafana.autoweave.com
+        - tempo.autoweave.com
+        - loki.autoweave.com
