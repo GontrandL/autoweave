@@ -1,7 +1,8 @@
-const { parentPort, workerData } = require('worker_threads');
-const { VM } = require('vm2');
-const path = require('path');
 const { createRequire } = require('module');
+const path = require('path');
+const { parentPort, workerData } = require('worker_threads');
+
+const { VM } = require('vm2');
 
 class SecurePluginSandbox {
   constructor() {
@@ -205,7 +206,7 @@ class SecurePluginSandbox {
   }
 
   checkFilePermission(filePath, mode) {
-    if (!this.permissions.filesystem) return false;
+    if (!this.permissions.filesystem) {return false;}
     
     for (const perm of this.permissions.filesystem) {
       if (filePath.startsWith(perm.path)) {
@@ -218,7 +219,7 @@ class SecurePluginSandbox {
   }
 
   checkNetworkPermission(url) {
-    if (!this.permissions.network?.outbound) return false;
+    if (!this.permissions.network?.outbound) {return false;}
     
     try {
       const urlObj = new URL(url);
@@ -297,7 +298,7 @@ class SecurePluginSandbox {
   async unloadPlugin() {
     try {
       // Call onUnload hook if defined
-      if (this.manifest.hooks.onUnload && this.plugin && this.plugin[this.manifest.hooks.onUnload]) {
+      if (this.manifest.hooks.onUnload && this.plugin?.[this.manifest.hooks.onUnload]) {
         await this.plugin[this.manifest.hooks.onUnload]();
       }
       
@@ -362,7 +363,7 @@ class SecurePluginSandbox {
     const { eventType, deviceInfo } = data;
     const hookName = eventType === 'attach' ? this.manifest.hooks.onUSBAttach : this.manifest.hooks.onUSBDetach;
     
-    if (hookName && this.plugin && this.plugin[hookName]) {
+    if (hookName && this.plugin?.[hookName]) {
       const result = await this.plugin[hookName](deviceInfo);
       parentPort.postMessage({ 
         type: 'USB_EVENT_HANDLED',
@@ -372,7 +373,7 @@ class SecurePluginSandbox {
   }
 
   async handleJob(jobData) {
-    if (this.manifest.hooks.onJobReceived && this.plugin && this.plugin[this.manifest.hooks.onJobReceived]) {
+    if (this.manifest.hooks.onJobReceived && this.plugin?.[this.manifest.hooks.onJobReceived]) {
       const result = await this.plugin[this.manifest.hooks.onJobReceived](jobData);
       parentPort.postMessage({ 
         type: 'JOB_RESULT',

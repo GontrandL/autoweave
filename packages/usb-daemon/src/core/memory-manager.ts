@@ -9,7 +9,7 @@ interface MemoryStats {
   weakRefCount: number;
 }
 
-interface CacheEntry<T> {
+interface CacheEntry<T extends object> {
   weakRef: WeakRef<T>;
   lastAccess: number;
   size: number;

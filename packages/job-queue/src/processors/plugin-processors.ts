@@ -1,5 +1,13 @@
 import { JobContext, JobResult, ProcessFunction } from '../types';
 
+// Logger helper - uses context.log when available, otherwise no-op
+const getLogger = (context?: JobContext) => ({
+  info: (message: string) => context ? context.log(message, 'info') : undefined,
+  debug: (message: string) => context ? context.log(message, 'info') : undefined,
+  warn: (message: string) => context ? context.log(message, 'warn') : undefined,
+  error: (message: string) => context ? context.log(message, 'error') : undefined
+});
+
 interface PluginJobPayload {
   pluginId: string;
   operation: 'load' | 'unload' | 'execute' | 'validate' | 'reload';
@@ -38,7 +46,7 @@ export const pluginLoadProcessor: ProcessFunction = async (context: JobContext):
     context.progress(90);
 
     // Register plugin with system
-    await registerPluginWithSystem(payload.pluginId, manifest, loadResult);
+    await registerPluginWithSystem(payload.pluginId, manifest, loadResult, context);
     
     context.progress(100);
 
@@ -80,22 +88,22 @@ export const pluginUnloadProcessor: ProcessFunction = async (context: JobContext
     context.progress(10);
 
     // Stop plugin execution
-    await stopPluginExecution(payload.pluginId);
+    await stopPluginExecution(payload.pluginId, context);
     
     context.progress(30);
 
     // Cleanup plugin resources
-    await cleanupPluginResources(payload.pluginId);
+    await cleanupPluginResources(payload.pluginId, context);
     
     context.progress(50);
 
     // Remove plugin from system registry
-    await unregisterPluginFromSystem(payload.pluginId);
+    await unregisterPluginFromSystem(payload.pluginId, context);
     
     context.progress(70);
 
     // Cleanup secure environment
-    await cleanupSecureEnvironment(payload.pluginId);
+    await cleanupSecureEnvironment(payload.pluginId, context);
     
     context.progress(90);
 
@@ -142,7 +150,7 @@ export const pluginExecuteProcessor: ProcessFunction = async (context: JobContex
     context.progress(20);
 
     // Check execution permissions
-    await checkExecutionPermissions(payload.pluginId, payload.parameters);
+    await checkExecutionPermissions(payload.pluginId, payload.parameters, context);
     
     context.progress(30);
 
@@ -161,7 +169,7 @@ export const pluginExecuteProcessor: ProcessFunction = async (context: JobContex
     context.progress(90);
 
     // Cleanup execution context
-    await cleanupExecutionContext(payload.pluginId, executionContext);
+    await cleanupExecutionContext(payload.pluginId, executionContext, context);
     
     context.progress(100);
 
@@ -260,8 +268,8 @@ export const pluginReloadProcessor: ProcessFunction = async (context: JobContext
     context.progress(10);
 
     // Unload existing plugin
-    await stopPluginExecution(payload.pluginId);
-    await cleanupPluginResources(payload.pluginId);
+    await stopPluginExecution(payload.pluginId, context);
+    await cleanupPluginResources(payload.pluginId, context);
     
     context.progress(30);
 
@@ -281,7 +289,7 @@ export const pluginReloadProcessor: ProcessFunction = async (context: JobContext
     context.progress(90);
 
     // Re-register with system
-    await registerPluginWithSystem(payload.pluginId, manifest, loadResult);
+    await registerPluginWithSystem(payload.pluginId, manifest, loadResult, context);
     
     context.progress(100);
 
@@ -313,49 +321,54 @@ export const pluginReloadProcessor: ProcessFunction = async (context: JobContext
 };
 
 // Helper functions
-async function validatePluginManifest(pluginPath: string): Promise<any> {
+async function validatePluginManifest(_pluginPath: string): Promise<any> {
   // In real implementation, this would validate the plugin manifest
   return { valid: true, manifest: {} };
 }
 
-async function checkPluginPermissions(pluginId: string, manifest: any): Promise<any> {
+async function checkPluginPermissions(_pluginId: string, _manifest: any): Promise<any> {
   // Check if plugin has required permissions
   return { granted: true, permissions: [] };
 }
 
-async function loadPluginSecure(pluginId: string, pluginPath: string, manifest: any): Promise<any> {
+async function loadPluginSecure(_pluginId: string, _pluginPath: string, _manifest: any): Promise<any> {
   // Load plugin in secure environment
   return { loaded: true, pluginInstance: {} };
 }
 
-async function initializePlugin(pluginId: string, config: any): Promise<any> {
+async function initializePlugin(_pluginId: string, _config: any): Promise<any> {
   // Initialize plugin with configuration
   return { initialized: true };
 }
 
-async function registerPluginWithSystem(pluginId: string, manifest: any, loadResult: any): Promise<void> {
+async function registerPluginWithSystem(pluginId: string, _manifest: any, _loadResult: any, context?: JobContext): Promise<void> {
   // Register plugin with system
-  console.log(`Registering plugin ${pluginId} with system`);
+  const logger = getLogger(context);
+  logger.info(`Registering plugin ${pluginId} with system`);
 }
 
-async function stopPluginExecution(pluginId: string): Promise<void> {
+async function stopPluginExecution(pluginId: string, context?: JobContext): Promise<void> {
   // Stop plugin execution
-  console.log(`Stopping plugin execution: ${pluginId}`);
+  const logger = getLogger(context);
+  logger.info(`Stopping plugin execution: ${pluginId}`);
 }
 
-async function cleanupPluginResources(pluginId: string): Promise<void> {
+async function cleanupPluginResources(pluginId: string, context?: JobContext): Promise<void> {
   // Cleanup plugin resources
-  console.log(`Cleaning up resources for plugin: ${pluginId}`);
+  const logger = getLogger(context);
+  logger.info(`Cleaning up resources for plugin: ${pluginId}`);
 }
 
-async function unregisterPluginFromSystem(pluginId: string): Promise<void> {
+async function unregisterPluginFromSystem(pluginId: string, context?: JobContext): Promise<void> {
   // Remove plugin from system registry
-  console.log(`Unregistering plugin from system: ${pluginId}`);
+  const logger = getLogger(context);
+  logger.info(`Unregistering plugin from system: ${pluginId}`);
 }
 
-async function cleanupSecureEnvironment(pluginId: string): Promise<void> {
+async function cleanupSecureEnvironment(pluginId: string, context?: JobContext): Promise<void> {
   // Cleanup secure environment
-  console.log(`Cleaning up secure environment for plugin: ${pluginId}`);
+  const logger = getLogger(context);
+  logger.info(`Cleaning up secure environment for plugin: ${pluginId}`);
 }
 
 async function getPluginInfo(pluginId: string): Promise<any> {
@@ -363,17 +376,18 @@ async function getPluginInfo(pluginId: string): Promise<any> {
   return { id: pluginId, loaded: true };
 }
 
-async function checkExecutionPermissions(pluginId: string, parameters: any): Promise<void> {
+async function checkExecutionPermissions(pluginId: string, _parameters: any, context?: JobContext): Promise<void> {
   // Check if plugin has permission to execute with given parameters
-  console.log(`Checking execution permissions for plugin: ${pluginId}`);
+  const logger = getLogger(context);
+  logger.info(`Checking execution permissions for plugin: ${pluginId}`);
 }
 
-async function prepareExecutionContext(pluginId: string, parameters: any): Promise<any> {
+async function prepareExecutionContext(_pluginId: string, parameters: any): Promise<any> {
   // Prepare execution context
   return { context: {}, parameters };
 }
 
-async function executePluginSecure(pluginId: string, context: any, progressCallback: (progress: number) => void): Promise<any> {
+async function executePluginSecure(_pluginId: string, _context: any, progressCallback: (progress: number) => void): Promise<any> {
   // Execute plugin in secure environment
   return new Promise((resolve) => {
     let progress = 0;
@@ -388,22 +402,23 @@ async function executePluginSecure(pluginId: string, context: any, progressCallb
   });
 }
 
-async function cleanupExecutionContext(pluginId: string, context: any): Promise<void> {
+async function cleanupExecutionContext(pluginId: string, _context: any, jobContext?: JobContext): Promise<void> {
   // Cleanup execution context
-  console.log(`Cleaning up execution context for plugin: ${pluginId}`);
+  const logger = getLogger(jobContext);
+  logger.info(`Cleaning up execution context for plugin: ${pluginId}`);
 }
 
-async function validatePluginCode(pluginPath: string): Promise<any> {
+async function validatePluginCode(_pluginPath: string): Promise<any> {
   // Validate plugin code
   return { valid: true, issues: [] };
 }
 
-async function validatePluginSecurity(pluginPath: string): Promise<any> {
+async function validatePluginSecurity(_pluginPath: string): Promise<any> {
   // Validate plugin security
   return { valid: true, securityIssues: [] };
 }
 
-async function validatePluginLoading(pluginPath: string): Promise<any> {
+async function validatePluginLoading(_pluginPath: string): Promise<any> {
   // Test plugin loading
   return { valid: true, loadable: true };
 }

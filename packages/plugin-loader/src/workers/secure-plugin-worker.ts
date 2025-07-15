@@ -1,8 +1,9 @@
-import { Worker } from 'worker_threads';
 import { EventEmitter } from 'events';
 import { join } from 'path';
-import { PluginManifest } from '../types/plugin';
+import { Worker } from 'worker_threads';
+
 import { PermissionManager } from '../security/permission-manager';
+import type { PluginManifest } from '../types/plugin';
 
 export interface SecureWorkerOptions {
   manifest: PluginManifest;
@@ -79,13 +80,13 @@ export class SecurePluginWorker extends EventEmitter {
     });
 
     this.setupEventHandlers();
-    
+
     // Wait for worker to be ready
     await this.waitForReady();
   }
 
   private setupEventHandlers(): void {
-    if (!this.worker) return;
+    if (!this.worker) {return;}
 
     this.worker.on('message', this.handleWorkerMessage.bind(this));
     this.worker.on('error', this.handleWorkerError.bind(this));
@@ -149,7 +150,7 @@ export class SecurePluginWorker extends EventEmitter {
   private handleWorkerError(error: Error): void {
     console.error(`Worker error in plugin ${this.manifest.name}:`, error);
     this.emit('error', error);
-    
+
     // Terminate worker on critical errors
     if (this.shouldTerminateOnError(error)) {
       this.terminate();
@@ -161,7 +162,7 @@ export class SecurePluginWorker extends EventEmitter {
       console.warn(`Worker exited unexpectedly for plugin ${this.manifest.name} with code ${code}`);
       this.emit('exit', code);
     }
-    
+
     // Clean up pending requests
     for (const [, { reject }] of this.pendingRequests) {
       reject(new Error('Worker exited'));
@@ -176,17 +177,17 @@ export class SecurePluginWorker extends EventEmitter {
 
   private checkRateLimit(): boolean {
     const now = Date.now();
-    
+
     // Remove old entries outside the window
     this.messageWindow = this.messageWindow.filter(
       timestamp => now - timestamp < this.rateLimit.windowMs
     );
-    
+
     // Check if we're under the limit
     if (this.messageWindow.length >= this.rateLimit.maxMessages) {
       return false;
     }
-    
+
     // Add current message
     this.messageWindow.push(now);
     return true;
@@ -196,22 +197,22 @@ export class SecurePluginWorker extends EventEmitter {
     if (!message || typeof message !== 'object') {
       return false;
     }
-    
+
     if (!message.type || typeof message.type !== 'string') {
       return false;
     }
-    
+
     // Additional validation based on message type
     const allowedTypes = [
-      'LOG', 'ERROR', 'METRIC', 'EVENT', 
+      'LOG', 'ERROR', 'METRIC', 'EVENT',
       'READY', 'LOAD_SUCCESS', 'LOAD_ERROR',
       'USB_EVENT_HANDLED', 'JOB_RESULT'
     ];
-    
+
     if (!allowedTypes.includes(message.type)) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -223,7 +224,7 @@ export class SecurePluginWorker extends EventEmitter {
       'SIGSEGV',
       'SIGABRT'
     ];
-    
+
     return criticalErrors.some(err => error.message.includes(err));
   }
 
@@ -274,10 +275,10 @@ export class SecurePluginWorker extends EventEmitter {
   }
 
   async terminate(): Promise<void> {
-    if (this.isTerminated) return;
-    
+    if (this.isTerminated) {return;}
+
     this.isTerminated = true;
-    
+
     // Try graceful shutdown first
     if (this.worker) {
       try {
@@ -287,11 +288,11 @@ export class SecurePluginWorker extends EventEmitter {
       } catch {
         // Worker might already be terminated
       }
-      
+
       await this.worker.terminate();
       this.worker = null;
     }
-    
+
     // Clean up pending requests
     for (const [, { reject }] of this.pendingRequests) {
       reject(new Error('Worker terminated'));

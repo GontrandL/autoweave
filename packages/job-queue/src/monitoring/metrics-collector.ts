@@ -6,8 +6,7 @@ import { AutoWeaveJobManager } from '../managers/autoweave-job-manager';
 import {
   QueueMetrics,
   WorkerMetrics,
-  MonitoringConfig,
-  QueueManagerError
+  MonitoringConfig
 } from '../types';
 
 interface MetricsSnapshot {
@@ -184,7 +183,7 @@ export class MetricsCollector extends EventEmitter {
       // Enhance with additional calculated metrics
       for (const [queueName, queueMetrics] of Object.entries(metrics)) {
         // Calculate completion and failure rates
-        const total = queueMetrics.completed + queueMetrics.failed;
+        // const total = queueMetrics.completed + queueMetrics.failed; // Unused variable
         queueMetrics.completedPerHour = this.calculateHourlyRate(queueName, 'completed');
         queueMetrics.failedPerHour = this.calculateHourlyRate(queueName, 'failed');
         queueMetrics.avgProcessingTime = this.calculateAverageProcessingTime(queueName);
@@ -287,8 +286,8 @@ export class MetricsCollector extends EventEmitter {
     const firstSnapshot = relevantSnapshots[0];
     const lastSnapshot = relevantSnapshots[relevantSnapshots.length - 1];
 
-    const firstValue = firstSnapshot.queues[queueName]?.[metric] || 0;
-    const lastValue = lastSnapshot.queues[queueName]?.[metric] || 0;
+    const firstValue = firstSnapshot?.queues[queueName]?.[metric] || 0;
+    const lastValue = lastSnapshot?.queues[queueName]?.[metric] || 0;
 
     return Math.max(0, lastValue - firstValue);
   }
@@ -321,6 +320,8 @@ export class MetricsCollector extends EventEmitter {
     const recent = this.metricsHistory.slice(-2);
     const [prev, current] = recent;
 
+    if (!prev || !current) return 0;
+    
     const timeDiff = (current.timestamp - prev.timestamp) / 1000; // seconds
     if (timeDiff === 0) return 0;
 
@@ -465,11 +466,11 @@ export class MetricsCollector extends EventEmitter {
   }
 
   // Public API methods
-  async getQueueMetrics(queueName?: string): Promise<QueueMetrics | Record<string, QueueMetrics>> {
+  async getQueueMetrics(queueName?: string): Promise<QueueMetrics | Record<string, QueueMetrics> | undefined> {
     const allMetrics = await this.collectQueueMetrics();
     
     if (queueName) {
-      return allMetrics[queueName];
+      return allMetrics[queueName] || undefined;
     }
     
     return allMetrics;
@@ -483,7 +484,7 @@ export class MetricsCollector extends EventEmitter {
     if (this.metricsHistory.length === 0) return null;
     
     const latestSnapshot = this.metricsHistory[this.metricsHistory.length - 1];
-    return this.calculateAggregatedMetrics(latestSnapshot);
+    return latestSnapshot ? this.calculateAggregatedMetrics(latestSnapshot) : null;
   }
 
   getMetricsHistory(hours?: number): MetricsSnapshot[] {

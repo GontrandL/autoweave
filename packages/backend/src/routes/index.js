@@ -1,19 +1,19 @@
-const express = require('express');
-const { Logger } = require('@autoweave/shared');
+import express from 'express';
+import { Logger } from '@autoweave/shared';
 
 const router = express.Router();
 const logger = new Logger('Routes');
 
 // Import route modules
-const memoryRoutes = require('./memory');
-const agentRoutes = require('./agents');
-const chatRoutes = require('./chat');
-const healthRoutes = require('./health');
-const kagentRoutes = require('./kagent');
-const configRoutes = require('./config');
-const selfAwarenessRoutes = require('./self-awareness');
-const searchRoutes = require('./search');
-const codingMemoryRoutes = require('./coding-memory');
+import memoryRoutes from './memory.js';
+import agentRoutes from './agents.js';
+import chatRoutes from './chat.js';
+import healthRoutes from './health.js';
+import kagentRoutes from './kagent.js';
+import configRoutes from './config.js';
+import selfAwarenessRoutes from './self-awareness.js';
+import searchRoutes from './search.js';
+import codingMemoryRoutes from './coding-memory.js';
 
 /**
  * Routes Index - Central routing configuration for AutoWeave API
@@ -281,7 +281,7 @@ class RoutesIndex {
 // Create and export singleton instance
 const routesIndex = new RoutesIndex();
 
-module.exports = {
+export {
     RoutesIndex,
     routesIndex,
     
@@ -292,3 +292,5 @@ module.exports = {
     healthRoutes,
     kagentRoutes
 };
+
+export default routesIndex;

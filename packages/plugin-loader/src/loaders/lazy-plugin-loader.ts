@@ -1,7 +1,17 @@
 import { EventEmitter } from 'events';
-import { PluginManifest, PluginInstance } from '../types/plugin';
+
+import { getLogger } from '@autoweave/observability';
+
+// Type-safe logger wrapper to work around observability package type issues
+interface Logger {
+  info(message: string, meta?: unknown): void;
+  error(message: string, error?: Error, meta?: unknown): void;
+  warn(message: string, meta?: unknown): void;
+}
+
+import type { PluginManifest, PluginInstance } from '../types/plugin';
 // import { SecurePluginWorker } from '../workers/secure-plugin-worker';
-import { PluginWorkerPool } from '../workers/plugin-worker-pool';
+import type { PluginWorkerPool } from '../workers/plugin-worker-pool';
 // import { FastManifestParser } from '../parsers/fast-manifest-parser';
 
 export enum PluginPriority {
@@ -46,17 +56,19 @@ export class LazyPluginLoader extends EventEmitter {
   private options: Required<LazyLoadOptions>;
   private loadMetrics: LoadMetrics;
   private isProcessing = false;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  private readonly logger = getLogger() as unknown as Logger;
 
   constructor(workerPool: PluginWorkerPool, options: LazyLoadOptions = {}) {
     super();
     this.workerPool = workerPool;
     // this.manifestParser = FastManifestParser.getInstance();
-    
+
     this.options = {
-      preloadQueue: options.preloadQueue || [],
-      priorityMap: options.priorityMap || new Map(),
-      maxConcurrentLoads: options.maxConcurrentLoads || 3,
-      loadTimeout: options.loadTimeout || 30000,
+      preloadQueue: options.preloadQueue ?? [],
+      priorityMap: options.priorityMap ?? new Map<string, PluginPriority>(),
+      maxConcurrentLoads: options.maxConcurrentLoads ?? 3,
+      loadTimeout: options.loadTimeout ?? 30000,
       enableMetrics: options.enableMetrics !== false
     };
 
@@ -72,15 +84,15 @@ export class LazyPluginLoader extends EventEmitter {
   async initialize(): Promise<void> {
     // Preload high-priority plugins
     if (this.options.preloadQueue.length > 0) {
-      console.log(`Preloading ${this.options.preloadQueue.length} plugins...`);
-      
+      this.logger.info(`Preloading ${this.options.preloadQueue.length} plugins...`);
+
       for (const pluginName of this.options.preloadQueue) {
-        const priority = this.options.priorityMap.get(pluginName) || PluginPriority.HIGH;
+        const priority = this.options.priorityMap.get(pluginName) ?? PluginPriority.HIGH;
         // Note: We need the manifest and path, which would typically come from scanning
         // This is a placeholder - in real usage, you'd have this information
-        console.log(`Queued ${pluginName} for preloading with priority ${priority}`);
+        this.logger.info(`Queued ${pluginName} for preloading with priority ${priority}`);
       }
-      
+
       await this.processLoadQueue();
     }
   }
@@ -96,17 +108,17 @@ export class LazyPluginLoader extends EventEmitter {
     const handler: ProxyHandler<PluginInstance> = {
       get: (target, prop) => {
         // If accessing core properties, return from manifest
-        if (prop === 'manifest') return manifest;
-        if (prop === 'path') return pluginPath;
-        if (prop === 'loaded') return this.loadedPlugins.has(manifest.name);
-        if (prop === 'signature') return target.signature;
+        if (prop === 'manifest') {return manifest;}
+        if (prop === 'path') {return pluginPath;}
+        if (prop === 'loaded') {return this.loadedPlugins.has(manifest.name);}
+        if (prop === 'signature') {return target.signature;}
 
         // For worker access, trigger lazy load
         if (prop === 'worker') {
           if (!this.loadedPlugins.has(manifest.name)) {
             // Queue for loading with normal priority
             this.queuePluginLoad(manifest, pluginPath, PluginPriority.NORMAL);
-            
+
             // Return a promise that resolves when loaded
             return new Promise((resolve) => {
               const checkLoaded = setInterval(() => {
@@ -118,10 +130,12 @@ export class LazyPluginLoader extends EventEmitter {
               }, 100);
             });
           }
-          
+
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return this.loadedPlugins.get(manifest.name)?.worker;
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return target[prop as keyof PluginInstance];
       }
     };
@@ -135,13 +149,13 @@ export class LazyPluginLoader extends EventEmitter {
 
     const proxy = new Proxy(proxyInstance, handler);
     this.pluginProxies.set(manifest.name, proxy);
-    
+
     return proxy;
   }
 
   async loadPlugin(
-    manifest: PluginManifest, 
-    pluginPath: string, 
+    manifest: PluginManifest,
+    pluginPath: string,
     priority: PluginPriority = PluginPriority.NORMAL
   ): Promise<PluginInstance> {
     // Check if already loaded
@@ -170,9 +184,9 @@ export class LazyPluginLoader extends EventEmitter {
 
     // Queue for loading
     this.queuePluginLoad(manifest, pluginPath, priority);
-    
+
     // Process queue
-    this.processLoadQueue();
+    void this.processLoadQueue();
 
     // Wait for load to complete
     return new Promise((resolve, reject) => {
@@ -192,8 +206,8 @@ export class LazyPluginLoader extends EventEmitter {
   }
 
   private queuePluginLoad(
-    manifest: PluginManifest, 
-    pluginPath: string, 
+    manifest: PluginManifest,
+    pluginPath: string,
     priority: PluginPriority
   ): void {
     // Check if already queued
@@ -236,7 +250,7 @@ export class LazyPluginLoader extends EventEmitter {
   }
 
   private async processLoadQueue(): Promise<void> {
-    if (this.isProcessing) return;
+    if (this.isProcessing) {return;}
     this.isProcessing = true;
 
     try {
@@ -251,7 +265,7 @@ export class LazyPluginLoader extends EventEmitter {
 
         // Take tasks up to available slots
         const tasks = this.loadQueue.splice(0, availableSlots);
-        
+
         // Load plugins in parallel
         await Promise.all(tasks.map(task => this.loadPluginTask(task)));
       }
@@ -263,7 +277,7 @@ export class LazyPluginLoader extends EventEmitter {
   private async loadPluginTask(task: PluginLoadTask): Promise<void> {
     const startTime = Date.now();
     const { manifest, pluginPath } = task;
-    
+
     this.loadingPlugins.add(manifest.name);
     task.attempts++;
 
@@ -283,7 +297,7 @@ export class LazyPluginLoader extends EventEmitter {
 
       // Store loaded plugin
       this.loadedPlugins.set(manifest.name, pluginInstance);
-      
+
       // Update metrics
       if (this.options.enableMetrics) {
         this.updateLoadMetrics(true, Date.now() - startTime);
@@ -296,10 +310,10 @@ export class LazyPluginLoader extends EventEmitter {
         loadTime: Date.now() - startTime
       });
 
-      console.log(`Loaded plugin ${manifest.name} (priority: ${task.priority}) in ${Date.now() - startTime}ms`);
+      this.logger.info(`Loaded plugin ${manifest.name} (priority: ${task.priority}) in ${Date.now() - startTime}ms`);
     } catch (error) {
-      console.error(`Failed to load plugin ${manifest.name}:`, error);
-      
+      this.logger.error(`Failed to load plugin ${manifest.name}:`, error instanceof Error ? error : new Error(String(error)));
+
       // Update metrics
       if (this.options.enableMetrics) {
         this.updateLoadMetrics(false, Date.now() - startTime);
@@ -326,14 +340,16 @@ export class LazyPluginLoader extends EventEmitter {
 
   private generateSignature(manifest: PluginManifest, pluginPath: string): string {
     // Simple signature generation - in production, use proper crypto
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
     const crypto = require('crypto');
     const data = JSON.stringify(manifest) + pluginPath;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return crypto.createHash('sha256').update(data).digest('hex');
   }
 
   private updateLoadMetrics(success: boolean, loadTime: number): void {
     this.loadMetrics.totalLoads++;
-    
+
     if (success) {
       this.loadMetrics.successfulLoads++;
     } else {
@@ -341,19 +357,19 @@ export class LazyPluginLoader extends EventEmitter {
     }
 
     this.loadMetrics.loadTimes.push(loadTime);
-    
+
     // Keep only last 100 load times
     if (this.loadMetrics.loadTimes.length > 100) {
       this.loadMetrics.loadTimes.shift();
     }
 
     // Calculate average
-    this.loadMetrics.averageLoadTime = 
-      this.loadMetrics.loadTimes.reduce((a, b) => a + b, 0) / 
+    this.loadMetrics.averageLoadTime =
+      this.loadMetrics.loadTimes.reduce((a, b) => a + b, 0) /
       this.loadMetrics.loadTimes.length;
   }
 
-  async unloadPlugin(name: string): Promise<void> {
+  unloadPlugin(name: string): void {
     const plugin = this.loadedPlugins.get(name);
     if (!plugin) {
       throw new Error(`Plugin ${name} not loaded`);
@@ -414,14 +430,14 @@ export class LazyPluginLoader extends EventEmitter {
     const queuedTask = this.loadQueue.find(
       task => task.manifest.name === pluginName
     );
-    
+
     if (queuedTask) {
       queuedTask.priority = priority;
       this.sortLoadQueue();
     }
   }
 
-  async preloadPlugins(pluginNames: string[]): Promise<void> {
+  preloadPlugins(pluginNames: string[]): void {
     // This would typically be called with actual manifest data
     // For now, just update the preload queue
     for (const name of pluginNames) {

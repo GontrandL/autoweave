@@ -1,6 +1,7 @@
-import { parentPort, workerData } from 'worker_threads';
 import { join } from 'path';
-import { PluginManifest } from '../types/plugin';
+import { parentPort, workerData } from 'worker_threads';
+
+import type { PluginManifest } from '../types/plugin';
 
 interface WorkerData {
   manifest: PluginManifest;
@@ -30,7 +31,7 @@ class PluginSandbox {
 
     // Override require/import to check permissions
     this.overrideModuleLoading();
-    
+
     // Set memory limits if specified
     if (this.manifest.permissions.memory?.max_heap_mb) {
       // Note: Memory limits are enforced at Worker creation time
@@ -42,24 +43,24 @@ class PluginSandbox {
     // This is a simplified implementation
     // In production, you'd want more sophisticated module loading controls
     const originalRequire = require;
-    
+
     // Override require to check permissions
     const moduleWhitelist = [
       'util', 'path', 'crypto', 'url', 'querystring',
       // Add other safe modules as needed
     ];
-    
+
     (global as any).require = function(id: string) {
       // Allow relative requires within plugin directory
       if (id.startsWith('./') || id.startsWith('../')) {
         return originalRequire(id);
       }
-      
+
       // Check if module is in whitelist
       if (moduleWhitelist.includes(id)) {
         return originalRequire(id);
       }
-      
+
       // Block other modules unless explicitly permitted
       throw new Error(`Module '${id}' not permitted for plugin ${this.manifest.name}`);
     }.bind(this);
@@ -68,22 +69,22 @@ class PluginSandbox {
   async loadPlugin(): Promise<void> {
     try {
       const pluginEntryPath = join(this.pluginPath, this.manifest.entry);
-      
+
       // Dynamic import of the plugin
       this.plugin = await import(pluginEntryPath);
-      
+
       // Call onLoad hook if defined
       if (this.manifest.hooks.onLoad && this.plugin[this.manifest.hooks.onLoad]) {
         await this.plugin[this.manifest.hooks.onLoad]();
       }
 
-      parentPort?.postMessage({ 
+      parentPort?.postMessage({
         type: 'LOAD_SUCCESS',
-        pluginName: this.manifest.name 
+        pluginName: this.manifest.name
       });
     } catch (error) {
-      parentPort?.postMessage({ 
-        type: 'LOAD_ERROR', 
+      parentPort?.postMessage({
+        type: 'LOAD_ERROR',
         error: error instanceof Error ? error.message : String(error),
         pluginName: this.manifest.name
       });
@@ -96,14 +97,14 @@ class PluginSandbox {
       if (this.manifest.hooks.onUnload && this.plugin[this.manifest.hooks.onUnload]) {
         await this.plugin[this.manifest.hooks.onUnload]();
       }
-      
-      parentPort?.postMessage({ 
+
+      parentPort?.postMessage({
         type: 'UNLOAD_SUCCESS',
-        pluginName: this.manifest.name 
+        pluginName: this.manifest.name
       });
     } catch (error) {
-      parentPort?.postMessage({ 
-        type: 'UNLOAD_ERROR', 
+      parentPort?.postMessage({
+        type: 'UNLOAD_ERROR',
         error: error instanceof Error ? error.message : String(error),
         pluginName: this.manifest.name
       });
@@ -113,19 +114,19 @@ class PluginSandbox {
   async handleUSBEvent(eventType: 'attach' | 'detach', deviceInfo: any): Promise<void> {
     try {
       const hookName = eventType === 'attach' ? this.manifest.hooks.onUSBAttach : this.manifest.hooks.onUSBDetach;
-      
+
       if (hookName && this.plugin[hookName]) {
         await this.plugin[hookName](deviceInfo);
       }
-      
-      parentPort?.postMessage({ 
+
+      parentPort?.postMessage({
         type: 'USB_EVENT_SUCCESS',
         eventType,
-        pluginName: this.manifest.name 
+        pluginName: this.manifest.name
       });
     } catch (error) {
-      parentPort?.postMessage({ 
-        type: 'USB_EVENT_ERROR', 
+      parentPort?.postMessage({
+        type: 'USB_EVENT_ERROR',
         error: error instanceof Error ? error.message : String(error),
         eventType,
         pluginName: this.manifest.name
@@ -137,16 +138,16 @@ class PluginSandbox {
     try {
       if (this.manifest.hooks.onJobReceived && this.plugin[this.manifest.hooks.onJobReceived]) {
         const result = await this.plugin[this.manifest.hooks.onJobReceived](jobData);
-        
-        parentPort?.postMessage({ 
+
+        parentPort?.postMessage({
           type: 'JOB_RESULT',
           result,
-          pluginName: this.manifest.name 
+          pluginName: this.manifest.name
         });
       }
     } catch (error) {
-      parentPort?.postMessage({ 
-        type: 'JOB_ERROR', 
+      parentPort?.postMessage({
+        type: 'JOB_ERROR',
         error: error instanceof Error ? error.message : String(error),
         pluginName: this.manifest.name
       });
@@ -156,11 +157,12 @@ class PluginSandbox {
 
 const sandbox = new PluginSandbox();
 
-parentPort?.on('message', async (message) => {
-  switch (message.type) {
-    case 'LOAD':
-      await sandbox.loadPlugin();
-      break;
+parentPort?.on('message', (message) => {
+  void (async () => {
+    switch (message.type) {
+      case 'LOAD':
+        await sandbox.loadPlugin();
+        break;
     case 'UNLOAD':
       await sandbox.unloadPlugin();
       break;
@@ -171,9 +173,10 @@ parentPort?.on('message', async (message) => {
       await sandbox.handleJobReceived(message.jobData);
       break;
     default:
-      parentPort?.postMessage({ 
-        type: 'ERROR', 
-        error: `Unknown message type: ${message.type}` 
+      parentPort?.postMessage({
+        type: 'ERROR',
+        error: `Unknown message type: ${message.type}`
       });
-  }
+    }
+  })();
 });

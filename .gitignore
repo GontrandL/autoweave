@@ -136,3 +136,26 @@ package.json.workspace
 # Old structure (to be removed after migration)
 /src.old/
 /autoweave-repos.old/
+
+# Test artifacts
+test-results/
+test-results.json
+test-results.xml
+playwright-report/
+test-server.js
+create-agent.html
+debug-analysis.js
+debug-analysis-report.json
+debug-output.txt
+
+# Development files
+*.spec.ts.tmp
+*.test.js.tmp
+kagent-deployment-status.md
+
+# Size analysis
+.size-limit.json
+
+# Generated documentation
+TASKS_AUDIT_RESULTS.md
+NEXT_PRIORITIES.md

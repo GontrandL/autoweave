@@ -1,6 +1,7 @@
-import { PluginPermissions } from '../types/plugin';
 import { normalize, isAbsolute } from 'path';
 import { URL } from 'url';
+
+import type { PluginPermissions } from '../types/plugin';
 
 export interface PermissionCheckResult {
   allowed: boolean;
@@ -14,7 +15,7 @@ export class PermissionManager {
   ];
 
   private static readonly BLOCKED_MODULES = [
-    'fs', 'fs/promises', 'child_process', 'cluster', 'dgram', 
+    'fs', 'fs/promises', 'child_process', 'cluster', 'dgram',
     'dns', 'net', 'os', 'process', 'v8', 'vm', 'worker_threads'
   ];
 
@@ -22,7 +23,7 @@ export class PermissionManager {
    * Check if a filesystem path access is allowed
    */
   static checkFilesystemAccess(
-    path: string, 
+    path: string,
     mode: 'read' | 'write' | 'readwrite',
     permissions: PluginPermissions
   ): PermissionCheckResult {
@@ -32,7 +33,7 @@ export class PermissionManager {
 
     // Normalize and validate path
     const normalizedPath = normalize(path);
-    
+
     // Prevent directory traversal attacks
     if (normalizedPath.includes('..')) {
       return { allowed: false, reason: 'Directory traversal detected' };
@@ -41,14 +42,14 @@ export class PermissionManager {
     // Check against allowed paths
     for (const permission of permissions.filesystem) {
       const allowedPath = normalize(permission.path);
-      
+
       // Check if requested path is within allowed path
       if (normalizedPath.startsWith(allowedPath) || normalizedPath === allowedPath) {
         // Check if mode is compatible
         if (permission.mode === 'readwrite' || permission.mode === mode) {
           return { allowed: true };
         }
-        
+
         if (mode === 'write' && permission.mode === 'read') {
           return { allowed: false, reason: 'Write access not permitted for this path' };
         }
@@ -71,30 +72,30 @@ export class PermissionManager {
 
     try {
       const requestUrl = new URL(url);
-      
+
       for (const allowedUrl of permissions.network.outbound) {
         const allowed = new URL(allowedUrl);
-        
+
         // Check protocol
         if (allowed.protocol !== requestUrl.protocol) {
           continue;
         }
-        
+
         // Check hostname (with wildcard support)
         if (allowed.hostname === '*' || allowed.hostname === requestUrl.hostname) {
           // Check port if specified
           if (allowed.port && allowed.port !== requestUrl.port) {
             continue;
           }
-          
+
           // Check path prefix
           if (allowed.pathname !== '/' && !requestUrl.pathname.startsWith(allowed.pathname)) {
             continue;
           }
-          
+
           return { allowed: true };
         }
-        
+
         // Support subdomain wildcards (*.example.com)
         if (allowed.hostname.startsWith('*.')) {
           const domain = allowed.hostname.slice(2);
@@ -202,7 +203,7 @@ export class PermissionManager {
         if (!isAbsolute(fs.path)) {
           errors.push(`Filesystem path must be absolute: ${fs.path}`);
         }
-        
+
         // Check for dangerous paths
         const dangerousPaths = ['/', '/etc', '/usr', '/bin', '/sbin', '/var', '/tmp'];
         if (dangerousPaths.includes(fs.path)) {

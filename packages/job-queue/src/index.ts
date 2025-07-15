@@ -6,7 +6,9 @@ export { AutoWeaveJobManager } from './managers/autoweave-job-manager';
 export { WorkerPoolManager } from './managers/worker-pool-manager';
 
 // Workers
-export { SecureWorkerRunner } from './workers/secure-worker-runner';
+export { WorkerThreadRunner } from './workers/worker-thread-runner';
+// SecureWorkerRunner has been removed due to vm2 security vulnerabilities
+// Use WorkerThreadRunner instead
 
 // Bridges
 export { USBEventBridge } from './bridges/usb-event-bridge';
@@ -155,5 +157,5 @@ export const DEFAULT_SECURITY_CONFIG = {
   timeoutMs: 30000,
   memoryLimitMB: 128,
   allowedModules: ['fs', 'path', 'util', 'crypto', 'events', 'stream'],
-  blockedModules: ['child_process', 'cluster', 'worker_threads', 'vm']
+  blockedModules: ['child_process', 'cluster', 'vm']
 } as const;

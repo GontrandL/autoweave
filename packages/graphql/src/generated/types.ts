@@ -3,18 +3,22 @@ export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = {
+  [_ in K]?: never;
+};
+export type Incremental<T> =
+  | T
+  | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: { input: string; output: string; }
-  String: { input: string; output: string; }
-  Boolean: { input: boolean; output: boolean; }
-  Int: { input: number; output: number; }
-  Float: { input: number; output: number; }
-  DateTime: { input: string; output: string; }
-  JSON: { input: any; output: any; }
-  Upload: { input: File; output: File; }
+  ID: { input: string; output: string };
+  String: { input: string; output: string };
+  Boolean: { input: boolean; output: boolean };
+  Int: { input: number; output: number };
+  Float: { input: number; output: number };
+  DateTime: { input: string; output: string };
+  JSON: { input: any; output: any };
+  Upload: { input: File; output: File };
 };
 
 export type Agent = {
@@ -47,7 +51,6 @@ export type Mutation = {
   togglePlugin: Plugin;
 };
 
-
 export type MutationTogglePluginArgs = {
   id: Scalars['ID']['input'];
 };
@@ -70,7 +73,7 @@ export type Plugin = {
 export enum PluginStatus {
   ERROR = 'error',
   RUNNING = 'running',
-  STOPPED = 'stopped'
+  STOPPED = 'stopped',
 }
 
 export type Query = {
@@ -112,24 +115,51 @@ export type User = {
   username: Scalars['String']['output'];
 };
 
-export type GetHealthMetricsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetHealthMetricsQueryVariables = Exact<{ [key: string]: never }>;
 
+export type GetHealthMetricsQuery = {
+  __typename?: 'Query';
+  systemHealth: {
+    __typename?: 'SystemHealth';
+    cpu: number;
+    memory: number;
+    disk: number;
+    usbDevices: number;
+    activePlugins: number;
+    queueJobs: number;
+    timestamp: string;
+  };
+};
 
-export type GetHealthMetricsQuery = { __typename?: 'Query', systemHealth: { __typename?: 'SystemHealth', cpu: number, memory: number, disk: number, usbDevices: number, activePlugins: number, queueJobs: number, timestamp: string } };
+export type GetHealthStatusQueryVariables = Exact<{ [key: string]: never }>;
 
-export type GetHealthStatusQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetHealthStatusQuery = {
+  __typename?: 'Query';
+  health: { __typename?: 'HealthStatus'; status: string; timestamp: string };
+};
 
+export type GetPluginsQueryVariables = Exact<{ [key: string]: never }>;
 
-export type GetHealthStatusQuery = { __typename?: 'Query', health: { __typename?: 'HealthStatus', status: string, timestamp: string } };
-
-export type GetPluginsQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type GetPluginsQuery = { __typename?: 'Query', plugins: Array<{ __typename?: 'Plugin', id: string, name: string, version: string, status: PluginStatus, description: string, memoryUsage: number, author: string, category: string }> };
+export type GetPluginsQuery = {
+  __typename?: 'Query';
+  plugins: Array<{
+    __typename?: 'Plugin';
+    id: string;
+    name: string;
+    version: string;
+    status: PluginStatus;
+    description: string;
+    memoryUsage: number;
+    author: string;
+    category: string;
+  }>;
+};
 
 export type TogglePluginMutationVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
-
-export type TogglePluginMutation = { __typename?: 'Mutation', togglePlugin: { __typename?: 'Plugin', id: string, status: PluginStatus } };
+export type TogglePluginMutation = {
+  __typename?: 'Mutation';
+  togglePlugin: { __typename?: 'Plugin'; id: string; status: PluginStatus };
+};

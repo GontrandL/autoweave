@@ -288,7 +288,7 @@ export class EnhancedPlatformDetector {
 
     // Adjust based on kernel version
     if (platformInfo.kernelVersion) {
-      const majorVersion = parseInt(platformInfo.kernelVersion.split('.')[0]);
+      const majorVersion = parseInt(platformInfo.kernelVersion.split('.')[0] || '0');
       if (majorVersion >= 5) {
         config.performance.max_events_per_second = 150; // Newer kernels handle USB better
       }

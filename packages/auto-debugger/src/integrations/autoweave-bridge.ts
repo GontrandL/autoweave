@@ -29,8 +29,8 @@ export class AutoWeaveBridge extends EventEmitter {
   constructor(private autoweaveConfig: Record<string, unknown>) {
     super();
     this.mcpServer = new PlaywrightMCPServer({
-      headless: autoweaveConfig.headless ?? true,
-      devtools: autoweaveConfig.devtools ?? false
+      headless: (autoweaveConfig.headless as boolean) ?? true,
+      devtools: (autoweaveConfig.devtools as boolean) ?? false
     });
 
     this.setupEventHandlers();
@@ -42,7 +42,7 @@ export class AutoWeaveBridge extends EventEmitter {
   async initialize(): Promise<void> {
     try {
       // Start MCP server
-      await this.mcpServer.start(this.autoweaveConfig.mcpPort || 8931);
+      await this.mcpServer.start((this.autoweaveConfig.mcpPort as number) || 8931);
       
       // Connect to AutoWeave memory system
       this.connectToMemory();

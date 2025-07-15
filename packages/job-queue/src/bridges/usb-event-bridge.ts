@@ -80,7 +80,6 @@ export class USBEventBridge extends EventEmitter {
     this.redis = new Redis({
       ...config.redis,
       maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
       lazyConnect: true
     });
 

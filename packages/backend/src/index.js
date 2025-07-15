@@ -2,9 +2,9 @@
  * @autoweave/backend - API and service management
  */
 
-const express = require('express');
-const { Logger } = require('@autoweave/shared');
-const routes = require('./routes');
+import express from 'express';
+import { Logger } from '@autoweave/shared';
+import routes from './routes/index.js';
 
 const logger = new Logger('Backend');
 
@@ -30,10 +30,10 @@ app.use((err, req, res, next) => {
 });
 
 // Export app for testing
-module.exports = app;
+export default app;
 
 // Start server if run directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         logger.info(`Backend server listening on port ${PORT}`);

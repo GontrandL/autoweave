@@ -1,13 +1,7 @@
 import { EventEmitter } from 'eventemitter3';
 import type { Page, ConsoleMessage, Response } from 'playwright';
 
-// import { getLogger } from '@autoweave/observability';
-const getLogger = (_name: string) => ({
-  info: console.log,
-  warn: console.warn,
-  error: console.error,
-  debug: console.debug
-});
+import { getLogger } from '@autoweave/observability';
 import type { 
   DebugReport, 
   ErrorEntry, 

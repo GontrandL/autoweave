@@ -1,8 +1,11 @@
-import { EventEmitter } from 'events';
-import { watch, FSWatcher } from 'chokidar';
+
 import { createHash } from 'crypto';
+import { EventEmitter } from 'events';
 import { readFileSync, existsSync } from 'fs';
 import { dirname } from 'path';
+
+import { watch } from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 
 export interface WatcherOptions {
   debounceMs?: number;
@@ -124,7 +127,7 @@ export class OptimizedPluginWatcher extends EventEmitter {
     // Set up debounced processing
     const timer = setTimeout(() => {
       this.pendingChanges.delete(path);
-      this.processFileChange(type, path);
+      void this.processFileChange(type, path);
     }, this.options.debounceMs);
 
     this.pendingChanges.set(path, timer);
@@ -141,21 +144,21 @@ export class OptimizedPluginWatcher extends EventEmitter {
       // For unlink events, we can't compute hash
       if (type === 'unlink') {
         this.fileHashes.delete(path);
-        
+
         // If it was a manifest file, emit plugin removed event
         if (path.endsWith('autoweave.plugin.json')) {
           const pluginPath = dirname(path);
           this.watchedManifests.delete(path);
           this.emit('plugin:removed', { pluginPath, manifestPath: path });
         }
-        
+
         this.emit('change', change);
         return;
       }
 
       // Compute file hash for add/change events
       const hash = await this.computeFileHash(path);
-      
+
       // Check if file actually changed (hash-based detection)
       const previousHash = this.fileHashes.get(path);
       if (type === 'change' && previousHash === hash) {
@@ -180,8 +183,8 @@ export class OptimizedPluginWatcher extends EventEmitter {
   }
 
   private async handleManifestChange(
-    type: 'add' | 'change', 
-    manifestPath: string, 
+    type: 'add' | 'change',
+    manifestPath: string,
     hash: string
   ): Promise<void> {
     try {
@@ -250,14 +253,14 @@ export class OptimizedPluginWatcher extends EventEmitter {
   // Optimization: batch check multiple files
   async batchCheckChanges(paths: string[]): Promise<Map<string, boolean>> {
     const results = new Map<string, boolean>();
-    
+
     await Promise.all(paths.map(async (path) => {
       try {
         if (!existsSync(path)) {
           results.set(path, true); // File removed
           return;
         }
-        
+
         const currentHash = await this.computeFileHash(path);
         const previousHash = this.fileHashes.get(path);
         results.set(path, currentHash !== previousHash);
@@ -265,7 +268,7 @@ export class OptimizedPluginWatcher extends EventEmitter {
         results.set(path, true); // Error reading file, consider it changed
       }
     }));
-    
+
     return results;
   }
 }

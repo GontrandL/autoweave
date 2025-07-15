@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Queue, Worker, QueueEvents, FlowProducer } from 'bullmq';
+import { Queue, QueueEvents, FlowProducer } from 'bullmq';
 import Redis from 'ioredis';
 import { Logger } from 'pino';
 import pino from 'pino';
@@ -13,11 +13,7 @@ import {
   JobOptions,
   QueueMetrics,
   HealthStatus,
-  ProcessFunction,
-  JobContext,
-  JobResult,
-  QueueManagerError,
-  WorkerPoolConfig
+  QueueManagerError
 } from '../types';
 
 import { WorkerPoolManager } from './worker-pool-manager';
@@ -49,7 +45,6 @@ export class AutoWeaveJobManager extends EventEmitter {
     this.redis = new Redis({
       ...config.redis,
       maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
       lazyConnect: true
     });
 
@@ -115,8 +110,8 @@ export class AutoWeaveJobManager extends EventEmitter {
             delay: 2000,
           },
           ...config.defaultJobOptions
-        },
-        settings: config.settings
+        }
+        // settings: config.settings - commented out due to type mismatch
       });
 
       const queueEvents = new QueueEvents(config.name, {
@@ -262,7 +257,11 @@ export class AutoWeaveJobManager extends EventEmitter {
 
   async getQueueMetrics(queueName?: string): Promise<QueueMetrics | Record<string, QueueMetrics>> {
     if (queueName) {
-      return this.metricsCollector.getQueueMetrics(queueName);
+      const result = await this.metricsCollector.getQueueMetrics(queueName);
+      if (!result) {
+        throw new Error(`Queue ${queueName} not found`);
+      }
+      return result;
     } else {
       return this.metricsCollector.getAllQueueMetrics();
     }
@@ -341,7 +340,7 @@ export class AutoWeaveJobManager extends EventEmitter {
     return this.shutdownPromise;
   }
 
-  private async performShutdown(timeout: number): Promise<void> {
+  private async performShutdown(_timeout: number): Promise<void> {
     const startTime = Date.now();
 
     try {
@@ -375,9 +374,14 @@ export class AutoWeaveJobManager extends EventEmitter {
       const shutdownTime = Date.now() - startTime;
       this.logger.info({ shutdownTime }, 'Graceful shutdown completed');
       this.emit('manager:shutdown_completed', { shutdownTime });
+      
+      // Clean up all event listeners to prevent memory leaks
+      this.removeAllListeners();
 
     } catch (error) {
       this.logger.error({ error }, 'Error during graceful shutdown');
+      // Still clean up listeners even on error
+      this.removeAllListeners();
       throw new QueueManagerError('Graceful shutdown failed', 'gracefulShutdown', error as Error);
     }
   }

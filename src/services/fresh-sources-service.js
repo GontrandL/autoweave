@@ -24,6 +24,16 @@ class FreshSourcesService {
             artifactHub: {
                 baseUrl: 'https://artifacthub.io/api/v1'
             },
+            // Nouvelles APIs open source 2025
+            openVSX: {
+                baseUrl: 'https://open-vsx.org/api'
+            },
+            cncfLandscape: {
+                baseUrl: 'https://landscape.cncf.io/api/v1'
+            },
+            helmHub: {
+                baseUrl: 'https://hub.helm.sh/api/chartsvc/v1'
+            },
             ...config
         };
         
@@ -450,6 +460,314 @@ class FreshSourcesService {
                 name
             };
         }
+    }
+
+    /**
+     * Recherche dans OpenVSX pour plugins open source
+     */
+    async searchOpenVSX(query) {
+        const url = `${this.config.openVSX.baseUrl}/-/search?query=${encodeURIComponent(query)}&size=5`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return [];
+            
+            const data = await response.json();
+            return data.extensions?.map(ext => ({
+                name: ext.name,
+                namespace: ext.namespace,
+                version: ext.version,
+                displayName: ext.displayName,
+                description: ext.description,
+                license: ext.license,
+                openSource: true,
+                registry: 'openvsx'
+            })) || [];
+        } catch (error) {
+            this.logger.warn('OpenVSX search failed:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Recherche dans CNCF Landscape pour projets cloud native
+     */
+    async searchCNCFLandscape(query) {
+        // Note: CNCF Landscape n'a pas d'API publique, on utilise une approximation
+        const cncfProjects = [
+            'kubernetes', 'prometheus', 'grafana', 'jaeger', 'envoy', 'containerd',
+            'rook', 'vitess', 'tikv', 'cortex', 'dragonfly', 'harbor', 'notary',
+            'thanos', 'opentracing', 'falco', 'opa', 'spiffe', 'spire', 'nats',
+            'linkerd', 'fluentd', 'helm', 'operator-framework', 'buildpacks',
+            'tekton', 'knative', 'crossplane', 'argo', 'flux', 'keptn'
+        ];
+
+        const matchingProjects = cncfProjects.filter(project => 
+            project.toLowerCase().includes(query.toLowerCase())
+        );
+
+        return matchingProjects.map(project => ({
+            name: project,
+            type: 'cncf-project',
+            cncf: true,
+            openSource: true,
+            description: `CNCF ${project} project`,
+            license: ['Apache-2.0'] // La plupart des projets CNCF utilisent Apache 2.0
+        }));
+    }
+
+    /**
+     * Filtre les résultats pour ne garder que l'open source
+     */
+    filterOpenSourceOnly(results) {
+        const openSourceLicenses = [
+            'MIT', 'Apache-2.0', 'BSD-3-Clause', 'BSD-2-Clause', 'GPL-2.0',
+            'GPL-3.0', 'LGPL-2.1', 'LGPL-3.0', 'MPL-2.0', 'EPL-2.0',
+            'ISC', 'Unlicense', 'AGPL-3.0'
+        ];
+
+        const filterResults = (items) => {
+            return items.filter(item => {
+                // Si marqué explicitement comme open source
+                if (item.openSource === true) return true;
+                
+                // Si a une licence open source
+                if (item.license) {
+                    const licenses = Array.isArray(item.license) ? item.license : [item.license];
+                    return licenses.some(license => 
+                        openSourceLicenses.includes(license)
+                    );
+                }
+                
+                // Si c'est un projet CNCF
+                if (item.cncf === true) return true;
+                
+                // Patterns connus pour les projets open source
+                const openSourcePatterns = [
+                    /^(prometheus|grafana|jaeger|loki)/i,
+                    /^(hashicorp|vault|consul|nomad)/i,
+                    /^(aquasecurity|trivy)/i,
+                    /^(argoproj|argo)/i,
+                    /^(tektoncd|tekton)/i,
+                    /^(goharbor|harbor)/i,
+                    /^(minio)/i,
+                    /^(eclipse|openvsx)/i
+                ];
+                
+                return openSourcePatterns.some(pattern => 
+                    pattern.test(item.name || '')
+                );
+            });
+        };
+
+        return {
+            docker: filterResults(results.docker || []),
+            npm: filterResults(results.npm || []),
+            helm: filterResults(results.helm || []),
+            github: filterResults(results.github || []),
+            openvsx: filterResults(results.openvsx || []),
+            cncf: filterResults(results.cncf || [])
+        };
+    }
+
+    /**
+     * Recherche multi-registres avec priorité open source
+     */
+    async searchOpenSourcePackages(query, options = {}) {
+        this.logger.info(`Searching for open source packages: ${query}`);
+        
+        const results = {
+            docker: [],
+            npm: [],
+            helm: [],
+            github: [],
+            openvsx: [],
+            cncf: [],
+            suggestions: []
+        };
+
+        // Recherche parallèle dans tous les registres
+        const promises = [];
+
+        // Docker Hub search
+        if (options.includeDocker !== false) {
+            promises.push(
+                this.searchDockerHub(query)
+                    .then(res => { results.docker = res; })
+                    .catch(err => this.logger.warn('Docker search failed:', err))
+            );
+        }
+
+        // NPM search
+        if (options.includeNpm !== false) {
+            promises.push(
+                this.searchNpm(query)
+                    .then(res => { results.npm = res; })
+                    .catch(err => this.logger.warn('NPM search failed:', err))
+            );
+        }
+
+        // Helm search
+        if (options.includeHelm !== false) {
+            promises.push(
+                this.searchHelm(query)
+                    .then(res => { results.helm = res; })
+                    .catch(err => this.logger.warn('Helm search failed:', err))
+            );
+        }
+
+        // OpenVSX search
+        if (options.includeOpenVSX !== false) {
+            promises.push(
+                this.searchOpenVSX(query)
+                    .then(res => { results.openvsx = res; })
+                    .catch(err => this.logger.warn('OpenVSX search failed:', err))
+            );
+        }
+
+        // CNCF Landscape search
+        if (options.includeCNCF !== false) {
+            promises.push(
+                this.searchCNCFLandscape(query)
+                    .then(res => { results.cncf = res; })
+                    .catch(err => this.logger.warn('CNCF search failed:', err))
+            );
+        }
+
+        await Promise.all(promises);
+
+        // Filtrer pour ne garder que l'open source
+        const openSourceResults = this.filterOpenSourceOnly(results);
+
+        // Générer des suggestions avec priorité open source
+        openSourceResults.suggestions = this.generateOpenSourceSuggestions(openSourceResults, query);
+
+        return openSourceResults;
+    }
+
+    /**
+     * Génère des suggestions priorisées pour l'open source
+     */
+    generateOpenSourceSuggestions(results, query) {
+        const suggestions = [];
+
+        // Prioriser les projets CNCF
+        if (results.cncf && results.cncf.length > 0) {
+            suggestions.push({
+                type: 'cncf',
+                name: results.cncf[0].name,
+                reason: 'CNCF project - Cloud Native Foundation approved',
+                priority: 'high',
+                openSource: true,
+                cncf: true
+            });
+        }
+
+        // Projets officiels Docker avec licences open source
+        const officialDocker = results.docker?.find(d => d.official && d.openSource);
+        if (officialDocker) {
+            suggestions.push({
+                type: 'docker',
+                name: officialDocker.name,
+                reason: 'Official Docker image with open source license',
+                priority: 'high',
+                openSource: true
+            });
+        }
+
+        // Packages NPM avec licences permissives
+        const permissiveNpm = results.npm?.find(n => 
+            n.license && ['MIT', 'Apache-2.0', 'BSD-3-Clause'].includes(n.license)
+        );
+        if (permissiveNpm) {
+            suggestions.push({
+                type: 'npm',
+                name: permissiveNpm.name,
+                reason: 'Permissive open source license',
+                priority: 'medium',
+                openSource: true
+            });
+        }
+
+        // Charts Helm open source
+        if (results.helm && results.helm.length > 0) {
+            suggestions.push({
+                type: 'helm',
+                name: results.helm[0].name,
+                reason: 'Open source Helm chart',
+                priority: 'medium',
+                openSource: true
+            });
+        }
+
+        // Extensions OpenVSX
+        if (results.openvsx && results.openvsx.length > 0) {
+            suggestions.push({
+                type: 'openvsx',
+                name: results.openvsx[0].name,
+                reason: 'Open source extension marketplace',
+                priority: 'low',
+                openSource: true
+            });
+        }
+
+        // Trier par priorité
+        return suggestions.sort((a, b) => {
+            const priorityOrder = { high: 3, medium: 2, low: 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+        });
+    }
+
+    /**
+     * Vérifie la licence d'un package
+     */
+    async checkLicense(type, name) {
+        try {
+            let licenseInfo = { license: 'Unknown', openSource: false };
+
+            switch (type) {
+                case 'npm':
+                    const npmInfo = await this.getNpmLatestVersion(name);
+                    if (npmInfo.license) {
+                        licenseInfo = {
+                            license: npmInfo.license,
+                            openSource: this.isOpenSourceLicense(npmInfo.license)
+                        };
+                    }
+                    break;
+
+                case 'docker':
+                    // Docker Hub ne fournit pas toujours les infos de licence
+                    // On peut essayer de déduire depuis les labels
+                    licenseInfo = { license: 'Check image labels', openSource: null };
+                    break;
+
+                default:
+                    break;
+            }
+
+            return licenseInfo;
+        } catch (error) {
+            this.logger.error(`Failed to check license for ${type}:${name}:`, error);
+            return { license: 'Unknown', openSource: false, error: error.message };
+        }
+    }
+
+    /**
+     * Vérifie si une licence est open source
+     */
+    isOpenSourceLicense(license) {
+        const openSourceLicenses = [
+            'MIT', 'Apache-2.0', 'BSD-3-Clause', 'BSD-2-Clause', 'GPL-2.0',
+            'GPL-3.0', 'LGPL-2.1', 'LGPL-3.0', 'MPL-2.0', 'EPL-2.0',
+            'ISC', 'Unlicense', 'AGPL-3.0'
+        ];
+
+        if (Array.isArray(license)) {
+            return license.some(l => openSourceLicenses.includes(l));
+        }
+
+        return openSourceLicenses.includes(license);
     }
 }
 

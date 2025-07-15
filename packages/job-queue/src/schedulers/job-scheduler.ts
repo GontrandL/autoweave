@@ -2,12 +2,12 @@ import { EventEmitter } from 'events';
 import { Logger } from 'pino';
 import pino from 'pino';
 import * as cron from 'node-cron';
+import * as parser from 'cron-parser';
 
 import { AutoWeaveJobManager } from '../managers/autoweave-job-manager';
 import {
   AutoWeaveJobData,
   JobOptions,
-  RepeatOptions,
   JobType
 } from '../types';
 
@@ -33,6 +33,7 @@ interface SchedulerConfig {
   maxConcurrentJobs?: number;
   retryFailedJobs?: boolean;
   retryDelay?: number;
+  maxRetries?: number;
   enableLogging?: boolean;
 }
 
@@ -52,6 +53,7 @@ export class JobScheduler extends EventEmitter {
       maxConcurrentJobs: config.maxConcurrentJobs || 10,
       retryFailedJobs: config.retryFailedJobs || true,
       retryDelay: config.retryDelay || 60000, // 1 minute
+      maxRetries: config.maxRetries || 3,
       enableLogging: config.enableLogging !== false
     };
 
@@ -71,7 +73,7 @@ export class JobScheduler extends EventEmitter {
     this.logger.info('Starting job scheduler...');
 
     // Start all scheduled jobs
-    for (const [jobId, scheduledJob] of this.scheduledJobs) {
+    for (const [, scheduledJob] of this.scheduledJobs) {
       if (scheduledJob.enabled) {
         this.startScheduledJob(scheduledJob);
       }
@@ -94,7 +96,7 @@ export class JobScheduler extends EventEmitter {
     this.isRunning = false;
 
     // Stop all scheduled jobs
-    for (const [jobId, scheduledJob] of this.scheduledJobs) {
+    for (const [, scheduledJob] of this.scheduledJobs) {
       if (scheduledJob.task) {
         scheduledJob.task.stop();
       }
@@ -102,6 +104,9 @@ export class JobScheduler extends EventEmitter {
 
     this.logger.info('Job scheduler stopped');
     this.emit('scheduler:stopped');
+    
+    // Clean up all event listeners to prevent memory leaks
+    this.removeAllListeners();
   }
 
   async scheduleJob(
@@ -335,7 +340,8 @@ export class JobScheduler extends EventEmitter {
     );
 
     scheduledJob.task.start();
-    scheduledJob.nextRun = scheduledJob.task.nextDate()?.toDate();
+    // node-cron doesn't expose nextDate, calculate manually
+    scheduledJob.nextRun = this.getNextRunDate(scheduledJob.cronExpression);
 
     this.logger.debug({
       jobId: scheduledJob.id,
@@ -371,7 +377,7 @@ export class JobScheduler extends EventEmitter {
       // Update job stats
       scheduledJob.runCount++;
       scheduledJob.lastRun = new Date();
-      scheduledJob.nextRun = scheduledJob.task?.nextDate()?.toDate();
+      scheduledJob.nextRun = this.getNextRunDate(scheduledJob.cronExpression);
 
       this.logger.info({
         jobId: scheduledJob.id,
@@ -403,11 +409,31 @@ export class JobScheduler extends EventEmitter {
         failureCount: scheduledJob.failureCount
       });
 
-      // Retry if configured
-      if (this.config.retryFailedJobs && scheduledJob.failureCount <= 3) {
+      // Retry with exponential backoff if configured
+      const maxRetries = this.config.maxRetries || 3;
+      if (this.config.retryFailedJobs && scheduledJob.failureCount < maxRetries) {
+        // Calculate exponential backoff: baseDelay * 2^(attemptNumber - 1)
+        const backoffDelay = this.config.retryDelay * Math.pow(2, scheduledJob.failureCount - 1);
+        
+        this.logger.info({
+          jobId: scheduledJob.id,
+          failureCount: scheduledJob.failureCount,
+          nextRetryIn: backoffDelay
+        }, 'Scheduling job retry with exponential backoff');
+        
         setTimeout(() => {
-          this.executeJob(scheduledJob);
-        }, this.config.retryDelay);
+          this.executeJob(scheduledJob).catch(retryError => {
+            this.logger.error({
+              jobId: scheduledJob.id,
+              error: retryError
+            }, 'Retry execution failed');
+          });
+        }, backoffDelay);
+      } else if (scheduledJob.failureCount >= maxRetries) {
+        this.logger.error({
+          jobId: scheduledJob.id,
+          failureCount: scheduledJob.failureCount
+        }, 'Max retries exceeded, job will not be retried');
       }
 
       throw error;
@@ -480,6 +506,22 @@ export class JobScheduler extends EventEmitter {
           error
         }, 'Failed to schedule maintenance job');
       });
+    }
+  }
+
+  private getNextRunDate(cronExpression: string): Date | undefined {
+    try {
+      // Parse cron expression to calculate next run
+      const interval = parser.parseExpression(cronExpression, {
+        currentDate: new Date(),
+        tz: this.config.timezone
+      });
+      
+      const nextDate = interval.next();
+      return nextDate.toDate();
+    } catch (error) {
+      this.logger.error({ cronExpression, error }, 'Failed to calculate next run date');
+      return undefined;
     }
   }
 }

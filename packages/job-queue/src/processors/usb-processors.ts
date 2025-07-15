@@ -1,4 +1,7 @@
 import { JobContext, JobResult, USBEventData, ProcessFunction } from '../types';
+import { getLogger } from '@autoweave/observability';
+
+const logger = getLogger('usb-processors');
 
 export const usbDeviceAttachedProcessor: ProcessFunction = async (context: JobContext): Promise<JobResult> => {
   const { data, log } = context;
@@ -123,7 +126,7 @@ export const usbDeviceDetachedProcessor: ProcessFunction = async (context: JobCo
 };
 
 export const usbScanCompleteProcessor: ProcessFunction = async (context: JobContext): Promise<JobResult> => {
-  const { data, log } = context;
+  const { log } = context;
 
   try {
     log('Processing USB scan complete');
@@ -177,7 +180,7 @@ export const usbScanCompleteProcessor: ProcessFunction = async (context: JobCont
 };
 
 // Helper functions
-async function checkKnownDevices(deviceInfo: USBEventData['deviceInfo']): Promise<any[]> {
+async function checkKnownDevices(_deviceInfo: USBEventData['deviceInfo']): Promise<any[]> {
   // In a real implementation, this would check against a database of known devices
   // For now, return empty array
   return [];
@@ -196,12 +199,12 @@ async function notifyPluginSystemDetached(deviceInfo: USBEventData['deviceInfo']
 
 async function updateDeviceRegistry(deviceInfo: USBEventData['deviceInfo'], action: 'attached' | 'detached'): Promise<void> {
   // Update device registry - in real implementation, this would interact with a database
-  console.log(`Device registry updated: ${action} device ${deviceInfo.vendorId}:${deviceInfo.productId}`);
+  logger.info(`Device registry updated: ${action} device ${deviceInfo.vendorId}:${deviceInfo.productId}`);
 }
 
 async function cleanupDeviceResources(deviceInfo: USBEventData['deviceInfo']): Promise<void> {
   // Cleanup any resources associated with the device
-  console.log(`Cleaning up resources for device ${deviceInfo.vendorId}:${deviceInfo.productId}`);
+  logger.info(`Cleaning up resources for device ${deviceInfo.vendorId}:${deviceInfo.productId}`);
 }
 
 async function getCurrentDeviceList(): Promise<any[]> {
@@ -214,7 +217,7 @@ async function getPreviousDeviceList(): Promise<any[]> {
   return [];
 }
 
-function identifyDeviceChanges(previous: any[], current: any[]): { added: any[], removed: any[] } {
+function identifyDeviceChanges(_previous: any[], _current: any[]): { added: any[], removed: any[] } {
   // Compare device lists to identify changes
   return {
     added: [],
@@ -224,5 +227,5 @@ function identifyDeviceChanges(previous: any[], current: any[]): { added: any[],
 
 async function updateDeviceRegistryFull(devices: any[]): Promise<void> {
   // Update device registry with full scan results
-  console.log(`Device registry updated with ${devices.length} devices`);
+  logger.info(`Device registry updated with ${devices.length} devices`);
 }

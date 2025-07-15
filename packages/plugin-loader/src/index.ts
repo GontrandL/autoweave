@@ -24,5 +24,4 @@ export * from './loaders/lazy-plugin-loader';
 // Validators
 export * from './validators/manifest-validator';
 
-// Legacy exports for compatibility
-export { PluginWorker } from './plugin-manager';
+// Note: PluginWorker is already exported via export * from './plugin-manager'

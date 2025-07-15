@@ -1,18 +1,21 @@
-import { EventEmitter } from 'events';
-import { PluginManifest, PluginInstance, PluginLoadResult } from './types/plugin';
-import { PluginWorkerPool } from './workers/plugin-worker-pool';
-import { OptimizedPluginWatcher } from './watcher/optimized-plugin-watcher';
-import { FastManifestParser } from './parsers/fast-manifest-parser';
-import { LazyPluginLoader, PluginPriority } from './loaders/lazy-plugin-loader';
-import { PermissionManager } from './security/permission-manager';
-import { join } from 'path';
-import { existsSync, readdirSync, readFile } from 'fs';
-import { promisify } from 'util';
-import { performance } from 'perf_hooks';
-import * as msgpack from 'msgpack-lite';
 import { createHash } from 'crypto';
-import { MetricsCollector } from '../../shared/src/performance/metrics-collector';
+import { EventEmitter } from 'events';
+import { existsSync, readdirSync, readFile } from 'fs';
+import { join } from 'path';
+import { performance } from 'perf_hooks';
+import { promisify } from 'util';
+
+// Using JSON instead of msgpack-lite for now
+
 import { LRUCache } from '../../shared/src/performance/lru-cache';
+import { MetricsCollector } from '../../shared/src/performance/metrics-collector';
+
+import { LazyPluginLoader, PluginPriority } from './loaders/lazy-plugin-loader';
+import { FastManifestParser } from './parsers/fast-manifest-parser';
+import { PermissionManager } from './security/permission-manager';
+import type { PluginManifest, PluginInstance, PluginLoadResult } from './types/plugin';
+import { OptimizedPluginWatcher } from './watcher/optimized-plugin-watcher';
+import { PluginWorkerPool } from './workers/plugin-worker-pool';
 
 const readFileAsync = promisify(readFile);
 
@@ -75,7 +78,7 @@ class ManifestCache {
 
   async get(manifestPath: string): Promise<PluginManifest | null> {
     const cached = this.cache.get(manifestPath);
-    if (!cached) return null;
+    if (!cached) {return null;}
 
     // Validate checksum
     const currentChecksum = await this.calculateChecksum(manifestPath);
@@ -123,15 +126,15 @@ export class OptimizedPluginManager extends EventEmitter {
   private registry: PluginRegistry = {};
   private options: OptimizedPluginManagerOptions;
   private isStarted = false;
-  
+
   // Performance optimizations
   private manifestCache: ManifestCache;
   private metrics: MetricsCollector;
   private messagePackEnabled: boolean;
-  
+
   // Pre-warmed worker pool
   private workerWarmupPromise?: Promise<void>;
-  
+
   // Parallel initialization tracking
   private initializationTasks = new Map<string, Promise<void>>();
 
@@ -139,19 +142,19 @@ export class OptimizedPluginManager extends EventEmitter {
     super();
     this.options = options;
     this.pluginDirectory = options.pluginDirectory;
-    
+
     // Initialize metrics
     this.metrics = new MetricsCollector('plugin-manager');
-    
+
     // Initialize manifest cache
     this.manifestCache = new ManifestCache(options.performance?.manifestCacheSize);
-    
+
     // Enable MessagePack if specified
     this.messagePackEnabled = options.performance?.enableMessagePack !== false;
 
     // Initialize components with optimized settings
     this.initializeComponents();
-    
+
     // Pre-warm worker pool in background
     this.workerWarmupPromise = this.preWarmWorkerPool();
   }
@@ -166,45 +169,45 @@ export class OptimizedPluginManager extends EventEmitter {
       recycleAfterOperations: this.options.workerPool?.recycleAfterOperations || 100,
       workerThreadPriority: this.options.performance?.workerThreadPriority
     };
-    
+
     this.workerPool = new PluginWorkerPool(workerPoolOptions);
-    
+
     // Initialize watcher with native events
     const watcherOptions = {
       ...this.options.watcher,
       useNativeEvents: this.options.watcher?.useNativeEvents !== false,
       debounceMs: this.options.watcher?.debounceMs || 100
     };
-    
+
     this.watcher = new OptimizedPluginWatcher(watcherOptions);
-    
+
     // Initialize manifest parser
     this.manifestParser = FastManifestParser.getInstance();
-    
+
     // Initialize lazy loader with optimizations
     this.lazyLoader = new LazyPluginLoader(this.workerPool, {
       ...this.options.loader,
       maxConcurrentLoads: this.options.loader?.maxConcurrentLoads || 5
     });
-    
+
     this.setupEventHandlers();
   }
 
   private async preWarmWorkerPool(): Promise<void> {
     console.log('Pre-warming worker pool...');
     const startTime = performance.now();
-    
+
     try {
       // Start minimum workers
       const minWorkers = this.options.workerPool?.minWorkers || 2;
       const warmupPromises = [];
-      
+
       for (let i = 0; i < minWorkers; i++) {
         warmupPromises.push(this.workerPool.createWorker());
       }
-      
+
       await Promise.all(warmupPromises);
-      
+
       const warmupTime = performance.now() - startTime;
       console.log(`Worker pool warmed up in ${warmupTime.toFixed(2)}ms`);
       this.metrics.recordHistogram('worker_warmup_time', warmupTime);
@@ -289,7 +292,7 @@ export class OptimizedPluginManager extends EventEmitter {
     await Promise.all([scanPromise, watchPromise]);
 
     this.isStarted = true;
-    
+
     const totalStartTime = performance.now() - startTime;
     console.log(`Optimized Plugin Manager started in ${totalStartTime.toFixed(2)}ms`);
     this.metrics.recordHistogram('manager_start_time', totalStartTime);
@@ -310,7 +313,7 @@ export class OptimizedPluginManager extends EventEmitter {
     // Unload all plugins in parallel batches
     const pluginNames = Object.keys(this.registry);
     const batchSize = 10;
-    
+
     for (let i = 0; i < pluginNames.length; i += batchSize) {
       const batch = pluginNames.slice(i, i + batchSize);
       await Promise.all(batch.map(name => this.unloadPlugin(name).catch(console.error)));
@@ -323,7 +326,7 @@ export class OptimizedPluginManager extends EventEmitter {
     this.manifestCache.clear();
 
     this.isStarted = false;
-    
+
     const totalStopTime = performance.now() - stopTime;
     console.log(`Optimized Plugin Manager stopped in ${totalStopTime.toFixed(2)}ms`);
     this.metrics.recordHistogram('manager_stop_time', totalStopTime);
@@ -338,8 +341,8 @@ export class OptimizedPluginManager extends EventEmitter {
 
     const scanStart = performance.now();
     const entries = readdirSync(this.pluginDirectory, { withFileTypes: true });
-    const scanPromises: Promise<void>[] = [];
-    
+    const _scanPromises: Promise<void>[] = [];
+
     // Group plugins by priority for optimized loading
     const priorityGroups = new Map<PluginPriority, Array<{ path: string; manifestPath: string }>>();
 
@@ -347,18 +350,18 @@ export class OptimizedPluginManager extends EventEmitter {
       if (entry.isDirectory()) {
         const pluginPath = join(this.pluginDirectory, entry.name);
         const manifestPath = join(pluginPath, 'autoweave.plugin.json');
-        
+
         if (existsSync(manifestPath)) {
           // Quick priority check from options
-          const priority = this.options.loader?.priorityMap?.get(entry.name) || 
-                          (this.options.loader?.preloadQueue?.includes(entry.name) 
-                            ? PluginPriority.HIGH 
+          const priority = this.options.loader?.priorityMap?.get(entry.name) ||
+                          (this.options.loader?.preloadQueue?.includes(entry.name)
+                            ? PluginPriority.HIGH
                             : PluginPriority.NORMAL);
-          
+
           if (!priorityGroups.has(priority)) {
             priorityGroups.set(priority, []);
           }
-          
+
           priorityGroups.get(priority)!.push({ path: pluginPath, manifestPath });
         }
       }
@@ -366,13 +369,13 @@ export class OptimizedPluginManager extends EventEmitter {
 
     // Load plugins by priority groups
     const sortedPriorities = Array.from(priorityGroups.keys()).sort((a, b) => a - b);
-    
+
     for (const priority of sortedPriorities) {
       const plugins = priorityGroups.get(priority)!;
-      const groupPromises = plugins.map(({ path, manifestPath }) => 
+      const groupPromises = plugins.map(({ path, manifestPath }) =>
         this.loadPluginFromPathOptimized(path, manifestPath)
       );
-      
+
       // Load priority group in parallel
       await Promise.all(groupPromises);
     }
@@ -383,7 +386,7 @@ export class OptimizedPluginManager extends EventEmitter {
   }
 
   private async loadPluginFromPathOptimized(
-    pluginPath: string, 
+    pluginPath: string,
     manifestPath: string
   ): Promise<void> {
     // Check if already loading
@@ -403,26 +406,26 @@ export class OptimizedPluginManager extends EventEmitter {
   }
 
   private async _loadPluginFromPathOptimized(
-    pluginPath: string, 
+    pluginPath: string,
     manifestPath: string
   ): Promise<void> {
     try {
       const loadStart = performance.now();
-      
+
       // Try cache first
       let manifest = await this.manifestCache.get(manifestPath);
-      
+
       if (!manifest) {
         // Parse manifest with optimizations
         const parseResult = await this.parseManifestOptimized(manifestPath);
-        
+
         if (!parseResult.valid || !parseResult.manifest) {
           console.error(`Invalid manifest at ${manifestPath}:`, parseResult.errors);
           return;
         }
-        
+
         manifest = parseResult.manifest;
-        
+
         // Cache the parsed manifest
         await this.manifestCache.set(manifestPath, manifest);
       }
@@ -431,9 +434,9 @@ export class OptimizedPluginManager extends EventEmitter {
       const [permissionErrors, priority] = await Promise.all([
         Promise.resolve(PermissionManager.validatePermissions(manifest.permissions)),
         Promise.resolve(
-          this.options.loader?.priorityMap?.get(manifest.name) || 
-          (this.options.loader?.preloadQueue?.includes(manifest.name) 
-            ? PluginPriority.HIGH 
+          this.options.loader?.priorityMap?.get(manifest.name) ||
+          (this.options.loader?.preloadQueue?.includes(manifest.name)
+            ? PluginPriority.HIGH
             : PluginPriority.NORMAL)
         )
       ]);
@@ -453,10 +456,10 @@ export class OptimizedPluginManager extends EventEmitter {
         const proxy = this.lazyLoader.createLazyProxy(manifest, pluginPath);
         this.registerPlugin(proxy);
       }
-      
+
       const loadTime = performance.now() - loadStart;
       this.metrics.recordHistogram('individual_plugin_load_time', loadTime);
-      
+
     } catch (error) {
       console.error(`Failed to load plugin from ${pluginPath}:`, error);
       this.metrics.incrementCounter('plugin_load_errors');
@@ -466,24 +469,24 @@ export class OptimizedPluginManager extends EventEmitter {
 
   private async parseManifestOptimized(manifestPath: string): Promise<any> {
     const parseStart = performance.now();
-    
+
     try {
       // Check for binary manifest first
       const binaryPath = manifestPath.replace('.json', '.msgpack');
       if (this.options.loader?.enableBinaryManifests && existsSync(binaryPath)) {
         const buffer = await readFileAsync(binaryPath);
-        const manifest = msgpack.decode(buffer);
-        
+        const manifest = JSON.parse(buffer.toString());
+
         this.metrics.recordHistogram('binary_manifest_parse_time', performance.now() - parseStart);
         return { valid: true, manifest };
       }
-      
+
       // Fall back to JSON parsing
       const result = await this.manifestParser.parseManifest(manifestPath);
-      
+
       this.metrics.recordHistogram('json_manifest_parse_time', performance.now() - parseStart);
       return result;
-      
+
     } catch (error) {
       return { valid: false, errors: [error.message] };
     }
@@ -513,15 +516,15 @@ export class OptimizedPluginManager extends EventEmitter {
 
   private async handlePluginChanged(data: any): Promise<void> {
     console.log(`Plugin changed: ${data.manifest.name}`);
-    
+
     // Unload existing version
     if (this.registry[data.manifest.name]) {
       await this.unloadPlugin(data.manifest.name);
     }
-    
+
     // Clear from cache
     this.manifestCache.clear();
-    
+
     // Reload plugin
     await this.loadPluginFromPathOptimized(data.pluginPath, data.manifestPath);
   }
@@ -540,7 +543,7 @@ export class OptimizedPluginManager extends EventEmitter {
   private handleWorkerError(data: any): void {
     const { pluginId, error } = data;
     console.error(`Worker error for plugin ${pluginId}:`, error);
-    
+
     // Record error in registry
     const [name] = pluginId.split('@');
     if (this.registry[name]) {
@@ -548,7 +551,7 @@ export class OptimizedPluginManager extends EventEmitter {
         timestamp: new Date(),
         error: error.message || String(error)
       });
-      
+
       // Keep only last 10 errors
       if (this.registry[name].metadata.errors.length > 10) {
         this.registry[name].metadata.errors.shift();
@@ -566,31 +569,31 @@ export class OptimizedPluginManager extends EventEmitter {
   }
 
   async loadPlugin(
-    manifest: PluginManifest, 
+    manifest: PluginManifest,
     pluginPath: string,
     priority?: PluginPriority
   ): Promise<PluginLoadResult> {
     const loadStart = performance.now();
-    
+
     try {
       const instance = await this.lazyLoader.loadPlugin(
-        manifest, 
-        pluginPath, 
+        manifest,
+        pluginPath,
         priority || PluginPriority.NORMAL
       );
-      
+
       this.registerPlugin(instance);
-      
+
       const loadTime = performance.now() - loadStart;
       if (this.registry[manifest.name]) {
         this.registry[manifest.name].metadata.performanceMetrics.loadTime = loadTime;
       }
-      
+
       return { success: true, plugin: instance };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -604,7 +607,7 @@ export class OptimizedPluginManager extends EventEmitter {
     try {
       await this.lazyLoader.unloadPlugin(name);
       delete this.registry[name];
-      
+
       console.log(`Plugin ${name} unloaded successfully`);
       this.emit('plugin:unloaded', { pluginName: name });
     } catch (error) {
@@ -619,7 +622,7 @@ export class OptimizedPluginManager extends EventEmitter {
       // Update access metadata
       entry.metadata.lastAccessed = new Date();
       entry.metadata.accessCount++;
-      
+
       return entry.instance;
     }
     return undefined;
@@ -632,17 +635,17 @@ export class OptimizedPluginManager extends EventEmitter {
   sendUSBEventToPlugins(eventType: 'attach' | 'detach', deviceInfo: any): void {
     const sendStart = performance.now();
     const eligiblePlugins = [];
-    
+
     // Pre-filter eligible plugins
     for (const entry of Object.values(this.registry)) {
       const { instance } = entry;
-      
+
       // Check permissions and hooks
       const hasUSBPermission = instance.manifest.permissions.usb;
-      const hasHook = eventType === 'attach' 
-        ? instance.manifest.hooks.onUSBAttach 
+      const hasHook = eventType === 'attach'
+        ? instance.manifest.hooks.onUSBAttach
         : instance.manifest.hooks.onUSBDetach;
-      
+
       if (hasUSBPermission && hasHook && instance.worker) {
         // Validate device access
         const { allowed, reason } = PermissionManager.checkUSBAccess(
@@ -658,19 +661,19 @@ export class OptimizedPluginManager extends EventEmitter {
         }
       }
     }
-    
+
     // Send events in parallel with MessagePack optimization
-    const eventData = this.messagePackEnabled 
-      ? msgpack.encode({ type: eventType, device: deviceInfo })
+    const eventData = this.messagePackEnabled
+      ? Buffer.from(JSON.stringify({ type: eventType, device: deviceInfo }))
       : { type: eventType, device: deviceInfo };
-    
-    const sendPromises = eligiblePlugins.map(({ instance, entry }) => 
+
+    const sendPromises = eligiblePlugins.map(({ instance, entry }) =>
       instance.worker.sendUSBEvent(eventType, eventData)
         .then(() => {
           // Track message passing time
           const messageTime = performance.now() - sendStart;
           entry.metadata.performanceMetrics.messagePassingTime.push(messageTime);
-          
+
           // Keep only last 100 samples
           if (entry.metadata.performanceMetrics.messagePassingTime.length > 100) {
             entry.metadata.performanceMetrics.messagePassingTime.shift();
@@ -681,7 +684,7 @@ export class OptimizedPluginManager extends EventEmitter {
           this.metrics.incrementCounter('usb_event_send_errors');
         })
     );
-    
+
     Promise.all(sendPromises).then(() => {
       const totalTime = performance.now() - sendStart;
       this.metrics.recordHistogram('usb_event_broadcast_time', totalTime);
@@ -690,14 +693,14 @@ export class OptimizedPluginManager extends EventEmitter {
 
   sendJobToPlugin(pluginName: string, jobData: any): void {
     const entry = this.registry[pluginName];
-    if (entry && entry.instance.worker) {
+    if (entry?.instance.worker) {
       const sendStart = performance.now();
-      
+
       // Optimize job data with MessagePack
-      const optimizedData = this.messagePackEnabled 
-        ? msgpack.encode(jobData)
+      const optimizedData = this.messagePackEnabled
+        ? Buffer.from(JSON.stringify(jobData))
         : jobData;
-      
+
       entry.instance.worker.sendJob(optimizedData)
         .then(() => {
           const sendTime = performance.now() - sendStart;
@@ -777,7 +780,7 @@ export class OptimizedPluginManager extends EventEmitter {
 
     return {
       ...entry.metadata,
-      workerMetrics: entry.instance.worker 
+      workerMetrics: entry.instance.worker
         ? this.workerPool.getWorkerMetrics(entry.instance.manifest)
         : null
     };

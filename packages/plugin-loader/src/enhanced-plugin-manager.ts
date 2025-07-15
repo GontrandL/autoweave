@@ -1,12 +1,23 @@
 import { EventEmitter } from 'events';
-import { PluginManifest, PluginInstance, PluginLoadResult } from './types/plugin';
-import { PluginWorkerPool } from './workers/plugin-worker-pool';
-import { OptimizedPluginWatcher } from './watcher/optimized-plugin-watcher';
-import { FastManifestParser } from './parsers/fast-manifest-parser';
-import { LazyPluginLoader, PluginPriority } from './loaders/lazy-plugin-loader';
-import { PermissionManager } from './security/permission-manager';
-import { join } from 'path';
 import { existsSync, readdirSync } from 'fs';
+import { join } from 'path';
+
+import { getLogger } from '@autoweave/observability';
+
+// Type-safe logger wrapper to work around observability package type issues
+interface Logger {
+  info(message: string, meta?: unknown): void;
+  error(message: string, error?: Error, meta?: unknown): void;
+  warn(message: string, meta?: unknown): void;
+}
+
+import { LazyPluginLoader, PluginPriority } from './loaders/lazy-plugin-loader';
+import { FastManifestParser } from './parsers/fast-manifest-parser';
+import { PermissionManager } from './security/permission-manager';
+import type { PluginManifest, PluginInstance, PluginLoadResult } from './types/plugin';
+import { OptimizedPluginWatcher } from './watcher/optimized-plugin-watcher';
+import { PluginWorkerPool } from './workers/plugin-worker-pool';
+
 
 export interface EnhancedPluginManagerOptions {
   pluginDirectory: string;
@@ -51,6 +62,8 @@ export class EnhancedPluginManager extends EventEmitter {
   private registry: PluginRegistry = {};
   private options: EnhancedPluginManagerOptions;
   private isStarted = false;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  private readonly logger = getLogger() as unknown as Logger;
 
   constructor(options: EnhancedPluginManagerOptions) {
     super();
@@ -77,20 +90,31 @@ export class EnhancedPluginManager extends EventEmitter {
     });
 
     this.workerPool.on('worker:error', (data) => {
-      this.handleWorkerError(data);
+      this.handleWorkerError(data as { pluginId: string; error: Error });
     });
 
     // Watcher events
-    this.watcher.on('plugin:added', async (data) => {
-      await this.handlePluginAdded(data);
+    this.watcher.on('plugin:added', (data) => {
+      void this.handlePluginAdded(data as {
+        pluginPath: string;
+        manifestPath: string;
+        manifest: PluginManifest;
+      });
     });
 
-    this.watcher.on('plugin:changed', async (data) => {
-      await this.handlePluginChanged(data);
+    this.watcher.on('plugin:changed', (data) => {
+      void this.handlePluginChanged(data as {
+        pluginPath: string;
+        manifestPath: string;
+        manifest: PluginManifest;
+      });
     });
 
-    this.watcher.on('plugin:removed', async (data) => {
-      await this.handlePluginRemoved(data);
+    this.watcher.on('plugin:removed', (data) => {
+      this.handlePluginRemoved(data as {
+        pluginPath: string;
+        manifestPath: string;
+      });
     });
 
     // Loader events
@@ -99,7 +123,11 @@ export class EnhancedPluginManager extends EventEmitter {
     });
 
     this.lazyLoader.on('plugin:load-failed', (data) => {
-      this.handlePluginLoadFailed(data);
+      this.handlePluginLoadFailed(data as {
+        manifest: PluginManifest;
+        error: Error;
+        attempts: number;
+      });
     });
   }
 
@@ -108,7 +136,7 @@ export class EnhancedPluginManager extends EventEmitter {
       throw new Error('Plugin manager already started');
     }
 
-    console.log('Starting Enhanced Plugin Manager...');
+    this.logger.info('Starting Enhanced Plugin Manager...');
 
     // Start worker pool
     await this.workerPool.start();
@@ -123,7 +151,7 @@ export class EnhancedPluginManager extends EventEmitter {
     await this.watcher.watch(this.pluginDirectory);
 
     this.isStarted = true;
-    console.log('Enhanced Plugin Manager started successfully');
+    this.logger.info('Enhanced Plugin Manager started successfully');
     this.emit('manager:started');
   }
 
@@ -132,28 +160,27 @@ export class EnhancedPluginManager extends EventEmitter {
       return;
     }
 
-    console.log('Stopping Enhanced Plugin Manager...');
+    this.logger.info('Stopping Enhanced Plugin Manager...');
 
     // Stop watching
     await this.watcher.stop();
 
     // Unload all plugins
-    const unloadPromises = Object.keys(this.registry).map(name => 
+    Object.keys(this.registry).forEach(name =>
       this.unloadPlugin(name)
     );
-    await Promise.all(unloadPromises);
 
     // Stop worker pool
     await this.workerPool.stop();
 
     this.isStarted = false;
-    console.log('Enhanced Plugin Manager stopped');
+    this.logger.info('Enhanced Plugin Manager stopped');
     this.emit('manager:stopped');
   }
 
   private async scanPlugins(): Promise<void> {
     if (!existsSync(this.pluginDirectory)) {
-      console.warn(`Plugin directory ${this.pluginDirectory} does not exist`);
+      this.logger.warn(`Plugin directory ${this.pluginDirectory} does not exist`);
       return;
     }
 
@@ -164,7 +191,7 @@ export class EnhancedPluginManager extends EventEmitter {
       if (entry.isDirectory()) {
         const pluginPath = join(this.pluginDirectory, entry.name);
         const manifestPath = join(pluginPath, 'autoweave.plugin.json');
-        
+
         if (existsSync(manifestPath)) {
           scanPromises.push(this.loadPluginFromPath(pluginPath, manifestPath));
         }
@@ -175,15 +202,15 @@ export class EnhancedPluginManager extends EventEmitter {
   }
 
   private async loadPluginFromPath(
-    pluginPath: string, 
+    pluginPath: string,
     manifestPath: string
   ): Promise<void> {
     try {
       // Parse manifest with caching
       const parseResult = await this.manifestParser.parseManifest(manifestPath);
-      
+
       if (!parseResult.valid || !parseResult.manifest) {
-        console.error(`Invalid manifest at ${manifestPath}:`, parseResult.errors);
+        this.logger.error(`Invalid manifest at ${manifestPath}:`, undefined, { errors: parseResult.errors });
         return;
       }
 
@@ -192,14 +219,14 @@ export class EnhancedPluginManager extends EventEmitter {
       // Validate permissions
       const permissionErrors = PermissionManager.validatePermissions(manifest.permissions);
       if (permissionErrors.length > 0) {
-        console.error(`Permission errors for ${manifest.name}:`, permissionErrors);
+        this.logger.error(`Permission errors for ${manifest.name}:`, undefined, { errors: permissionErrors });
         return;
       }
 
       // Determine priority
-      const priority = this.options.loader?.priorityMap?.get(manifest.name) || 
-                      (this.options.loader?.preloadQueue?.includes(manifest.name) 
-                        ? PluginPriority.HIGH 
+      const priority = this.options.loader?.priorityMap?.get(manifest.name) ??
+                      (this.options.loader?.preloadQueue?.includes(manifest.name)
+                        ? PluginPriority.HIGH
                         : PluginPriority.NORMAL);
 
       // Create lazy proxy or load immediately based on priority
@@ -213,7 +240,7 @@ export class EnhancedPluginManager extends EventEmitter {
         this.registerPlugin(proxy);
       }
     } catch (error) {
-      console.error(`Failed to load plugin from ${pluginPath}:`, error);
+      this.logger.error(`Failed to load plugin from ${pluginPath}:`, error instanceof Error ? error : new Error(String(error)));
       this.emit('plugin:error', { pluginPath, error });
     }
   }
@@ -230,46 +257,60 @@ export class EnhancedPluginManager extends EventEmitter {
     };
   }
 
-  private async handlePluginAdded(data: any): Promise<void> {
-    console.log(`New plugin detected: ${data.manifest.name}`);
+  private async handlePluginAdded(data: {
+    pluginPath: string;
+    manifestPath: string;
+    manifest: PluginManifest;
+  }): Promise<void> {
+    this.logger.info(`New plugin detected: ${data.manifest.name}`);
     await this.loadPluginFromPath(data.pluginPath, data.manifestPath);
   }
 
-  private async handlePluginChanged(data: any): Promise<void> {
-    console.log(`Plugin changed: ${data.manifest.name}`);
-    
+  private async handlePluginChanged(data: {
+    pluginPath: string;
+    manifestPath: string;
+    manifest: PluginManifest;
+  }): Promise<void> {
+    this.logger.info(`Plugin changed: ${data.manifest.name}`);
+
     // Unload existing version
     if (this.registry[data.manifest.name]) {
-      await this.unloadPlugin(data.manifest.name);
+      this.unloadPlugin(data.manifest.name);
     }
-    
+
     // Reload plugin
     await this.loadPluginFromPath(data.pluginPath, data.manifestPath);
   }
 
-  private async handlePluginRemoved(data: any): Promise<void> {
+  private handlePluginRemoved(data: {
+    pluginPath: string;
+    manifestPath: string;
+  }): void {
     // Find plugin by path
     for (const [name, entry] of Object.entries(this.registry)) {
       if (entry.instance.path === data.pluginPath) {
-        console.log(`Plugin removed: ${name}`);
-        await this.unloadPlugin(name);
+        this.logger.info(`Plugin removed: ${name}`);
+        this.unloadPlugin(name);
         break;
       }
     }
   }
 
-  private handleWorkerError(data: any): void {
+  private handleWorkerError(data: {
+    pluginId: string;
+    error: Error;
+  }): void {
     const { pluginId, error } = data;
-    console.error(`Worker error for plugin ${pluginId}:`, error);
-    
+    this.logger.error(`Worker error for plugin ${pluginId}:`, error);
+
     // Record error in registry
     const [name] = pluginId.split('@');
-    if (this.registry[name]) {
+    if (name && this.registry[name]) {
       this.registry[name].metadata.errors.push({
         timestamp: new Date(),
         error: error.message || String(error)
       });
-      
+
       // Keep only last 10 errors
       if (this.registry[name].metadata.errors.length > 10) {
         this.registry[name].metadata.errors.shift();
@@ -277,8 +318,14 @@ export class EnhancedPluginManager extends EventEmitter {
     }
   }
 
-  private handlePluginLoadFailed(data: any): void {
-    console.error(`Failed to load plugin ${data.manifest.name} after ${data.attempts} attempts`);
+  private handlePluginLoadFailed(data: {
+    manifest: PluginManifest;
+    error: Error;
+    attempts: number;
+  }): void {
+    this.logger.error(`Failed to load plugin ${data.manifest.name} after ${data.attempts} attempts`, data.error, {
+      attempts: data.attempts
+    });
     this.emit('plugin:error', {
       pluginName: data.manifest.name,
       error: data.error,
@@ -287,42 +334,42 @@ export class EnhancedPluginManager extends EventEmitter {
   }
 
   async loadPlugin(
-    manifest: PluginManifest, 
+    manifest: PluginManifest,
     pluginPath: string,
     priority?: PluginPriority
   ): Promise<PluginLoadResult> {
     try {
       const instance = await this.lazyLoader.loadPlugin(
-        manifest, 
-        pluginPath, 
-        priority || PluginPriority.NORMAL
+        manifest,
+        pluginPath,
+        priority ?? PluginPriority.NORMAL
       );
-      
+
       this.registerPlugin(instance);
-      
+
       return { success: true, plugin: instance };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
 
-  async unloadPlugin(name: string): Promise<void> {
+  unloadPlugin(name: string): void {
     const entry = this.registry[name];
     if (!entry) {
       throw new Error(`Plugin ${name} not found`);
     }
 
     try {
-      await this.lazyLoader.unloadPlugin(name);
+      this.lazyLoader.unloadPlugin(name);
       delete this.registry[name];
-      
-      console.log(`Plugin ${name} unloaded successfully`);
+
+      this.logger.info(`Plugin ${name} unloaded successfully`);
       this.emit('plugin:unloaded', { pluginName: name });
     } catch (error) {
-      console.error(`Failed to unload plugin ${name}:`, error);
+      this.logger.error(`Failed to unload plugin ${name}:`, error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }
@@ -333,7 +380,7 @@ export class EnhancedPluginManager extends EventEmitter {
       // Update access metadata
       entry.metadata.lastAccessed = new Date();
       entry.metadata.accessCount++;
-      
+
       return entry.instance;
     }
     return undefined;
@@ -343,40 +390,46 @@ export class EnhancedPluginManager extends EventEmitter {
     return Object.values(this.registry).map(entry => entry.instance);
   }
 
-  sendUSBEventToPlugins(eventType: 'attach' | 'detach', deviceInfo: any): void {
+  sendUSBEventToPlugins(eventType: 'attach' | 'detach', deviceInfo: {
+    vendorId: number;
+    productId: number;
+    [key: string]: unknown;
+  }): void {
     for (const entry of Object.values(this.registry)) {
       const { instance } = entry;
-      
+
       // Check permissions
       const hasUSBPermission = instance.manifest.permissions.usb;
-      const hasHook = eventType === 'attach' 
-        ? instance.manifest.hooks.onUSBAttach 
+      const hasHook = eventType === 'attach'
+        ? instance.manifest.hooks.onUSBAttach
         : instance.manifest.hooks.onUSBDetach;
-      
+
       if (hasUSBPermission && hasHook && instance.worker) {
         // Validate device access
         const { allowed, reason } = PermissionManager.checkUSBAccess(
-          deviceInfo.vendorId,
-          deviceInfo.productId,
+          String(deviceInfo.vendorId),
+          String(deviceInfo.productId),
           instance.manifest.permissions
         );
 
         if (allowed) {
-          instance.worker.sendUSBEvent(eventType, deviceInfo).catch((error: Error) => {
-            console.error(`Error sending USB event to ${instance.manifest.name}:`, error);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          void instance.worker.sendUSBEvent(eventType, deviceInfo).catch((error: Error) => {
+            this.logger.error(`Error sending USB event to ${instance.manifest.name}:`, error);
           });
         } else {
-          console.warn(`USB access denied for ${instance.manifest.name}: ${reason}`);
+          this.logger.warn(`USB access denied for ${instance.manifest.name}: ${reason}`);
         }
       }
     }
   }
 
-  sendJobToPlugin(pluginName: string, jobData: any): void {
+  sendJobToPlugin(pluginName: string, jobData: unknown): void {
     const entry = this.registry[pluginName];
-    if (entry && entry.instance.worker) {
-      entry.instance.worker.sendJob(jobData).catch((error: Error) => {
-        console.error(`Error sending job to ${pluginName}:`, error);
+    if (entry?.instance.worker) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      void entry.instance.worker.sendJob(jobData).catch((error: Error) => {
+        this.logger.error(`Error sending job to ${pluginName}:`, error);
       });
     }
   }
@@ -408,7 +461,13 @@ export class EnhancedPluginManager extends EventEmitter {
     };
   }
 
-  getPluginMetadata(name: string): any {
+  getPluginMetadata(name: string): null | {
+    loadedAt: Date;
+    lastAccessed: Date;
+    accessCount: number;
+    errors: Array<{ timestamp: Date; error: string }>;
+    workerMetrics: ReturnType<PluginWorkerPool['getWorkerMetrics']>;
+  } {
     const entry = this.registry[name];
     if (!entry) {
       return null;
@@ -416,7 +475,8 @@ export class EnhancedPluginManager extends EventEmitter {
 
     return {
       ...entry.metadata,
-      workerMetrics: entry.instance.worker 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      workerMetrics: entry.instance.worker
         ? this.workerPool.getWorkerMetrics(entry.instance.manifest)
         : null
     };
@@ -428,6 +488,6 @@ export class EnhancedPluginManager extends EventEmitter {
 
   clearCaches(): void {
     this.manifestParser.clearCache();
-    console.log('Caches cleared');
+    this.logger.info('Caches cleared');
   }
 }

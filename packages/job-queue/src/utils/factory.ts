@@ -4,7 +4,6 @@ import { processorRegistry } from '../processors/processor-registry';
 import {
   AutoWeaveJobManagerConfig,
   QueueConfiguration,
-  WorkerPoolConfig,
   MonitoringConfig,
   HealthConfig,
   GlobalSecurityConfig,
@@ -112,7 +111,20 @@ export async function createJobQueueService(config: JobQueueServiceConfig = {}):
   // Build security configuration
   const securityConfig: GlobalSecurityConfig = {
     ...DEFAULT_SECURITY_CONFIG,
-    ...config.security
+    ...config.security,
+    defaultSandbox: config.security?.defaultSandbox || {
+      sandboxEnabled: true,
+      timeoutMs: 30000,
+      memoryLimitMB: 128,
+      allowedModules: ['fs', 'path', 'util', 'crypto', 'events', 'stream'],
+      blockedModules: ['child_process', 'cluster', 'vm']
+    },
+    trustedPlugins: config.security?.trustedPlugins || [],
+    resourceLimits: config.security?.resourceLimits || {
+      maxMemoryMB: 512,
+      maxCpuPercent: 80,
+      maxExecutionTimeMs: 60000
+    }
   };
 
   // Build job manager configuration
@@ -202,22 +214,6 @@ async function setupQueueProcessors(jobManager: AutoWeaveJobManager, queueConfig
     // Create a processor for this queue
     const processor = processorRegistry.createDefaultProcessor(queueConfig.name);
     
-    // Create worker configuration
-    const workerConfig = {
-      queueName: queueConfig.name,
-      processFunction: processor,
-      concurrency: queueConfig.workers?.concurrency || 1,
-      removeOnComplete: queueConfig.defaultJobOptions?.removeOnComplete || 10,
-      removeOnFail: queueConfig.defaultJobOptions?.removeOnFail || 5,
-      security: {
-        sandboxEnabled: true,
-        timeoutMs: 30000,
-        memoryLimitMB: 128,
-        allowedModules: ['fs', 'path', 'util'],
-        blockedModules: ['child_process', 'cluster']
-      }
-    };
-
     // Initialize worker pool if configured
     if (queueConfig.workers) {
       const workerPool = jobManager.getWorkerPool(queueConfig.name);
@@ -306,7 +302,7 @@ export async function createProductionJobQueueService(overrides: Partial<JobQueu
         timeoutMs: 60000,
         memoryLimitMB: 256,
         allowedModules: ['fs', 'path', 'util', 'crypto', 'events', 'stream'],
-        blockedModules: ['child_process', 'cluster', 'worker_threads', 'vm']
+        blockedModules: ['child_process', 'cluster', 'vm']
       },
       trustedPlugins: [],
       resourceLimits: {

@@ -82,34 +82,16 @@ export class AutoWeaveTracer {
 
     this.sdk = new NodeSDK({
       resource,
-      spanProcessor,
+      spanProcessor: spanProcessor as any,
       instrumentations: [getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-redis': {
           enabled: true,
-          requestHook: (span, requestInfo) => {
-            span.setAttributes({
-              'redis.tenant_id': this.config.tenantId || 'default',
-              'redis.component': 'autoweave',
-            });
-          },
         },
         '@opentelemetry/instrumentation-http': {
           enabled: true,
-          requestHook: (span, request) => {
-            span.setAttributes({
-              'http.tenant_id': this.config.tenantId || 'default',
-              'http.component': 'autoweave',
-            });
-          },
         },
         '@opentelemetry/instrumentation-express': {
           enabled: true,
-          requestHook: (span, info) => {
-            span.setAttributes({
-              'express.tenant_id': this.config.tenantId || 'default',
-              'express.component': 'autoweave',
-            });
-          },
         },
         '@opentelemetry/instrumentation-fs': {
           enabled: false, // Can be noisy

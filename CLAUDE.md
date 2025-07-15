@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPORTANT INSTRUCTIONS:** Always read PLANNING.md at the start of every new conversation, check TASKS.md before starting your work, mark completed tasks to TASKS.md immediately, and add newly discovered tasks to TASKS.md when found.
 
+**CRITICAL**: Review NEXT_PRIORITIES.md for current urgent priorities and TASKS_AUDIT_RESULTS.md for latest audit findings.
+
 **NEW**: Review IMPROVEMENT_ROADMAP.md for architecture improvements and long-term vision based on comprehensive analysis.
+
+**AUDIT STATUS (15 July 2025)**: Documentation has been fully updated with real implementation status. Current conformity: 74%. Next priorities focus on finalizing E2E tests, validating K8s deployment, and securing secrets management.
 
 ## Project Overview
 
@@ -95,6 +99,13 @@ Optional:
 - **Chat**: `/api/chat/completions` (OpenAI-compatible)
 - **ANP**: `/agent/*` (protocol operations)
 - **Health**: `/health`, `/api/memory/health`
+- **Open Source**: `/api/open-source/*` (7 endpoints - discovery, compliance, analysis)
+  - `/api/open-source/alternatives` - Discover open source alternatives
+  - `/api/open-source/audit-licenses` - Audit project licenses
+  - `/api/open-source/compliance-score` - Get compliance score
+  - `/api/open-source/migration-plan` - Generate migration plan
+  - `/api/open-source/cost-analysis` - Cost savings analysis
+  - `/api/open-source/cncf-check` - CNCF compliance validation
 
 ### Working with Agent Modules
 
@@ -141,6 +152,31 @@ Each package has its own `package.json` and can be developed independently while
    ```bash
    npm run logs
    kubectl logs -l app=autoweave
+   ```
+
+5. **Open Source Discovery**:
+   ```bash
+   # CLI commands
+   autoweave discover-alternatives datadog
+   autoweave audit-licenses ./
+   autoweave compliance-score
+   autoweave migrate-to-oss datadog
+   autoweave cost-analysis
+   autoweave cncf-check
+   ```
+
+6. **Run Tests**:
+   ```bash
+   npm test                    # Unit tests
+   npm run test:e2e           # E2E tests with Playwright
+   npm run test:integration   # Integration tests
+   npm run test:coverage      # Coverage report
+   npm run test:load          # Load tests with k6
+   ```
+
+7. **Debug Analysis**:
+   ```bash
+   node debug-analysis.js     # Run debugging analysis
    ```
 
 ### Debugging Tips

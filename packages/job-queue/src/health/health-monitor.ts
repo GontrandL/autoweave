@@ -6,8 +6,7 @@ import { AutoWeaveJobManager } from '../managers/autoweave-job-manager';
 import {
   HealthStatus,
   HealthConfig,
-  QueueMetrics,
-  QueueManagerError
+  QueueMetrics
 } from '../types';
 
 interface HealthCheck {
@@ -20,14 +19,7 @@ interface HealthCheck {
   lastChecked?: number;
 }
 
-interface SystemMetrics {
-  uptime: number;
-  memoryUsage: NodeJS.MemoryUsage;
-  cpuUsage: NodeJS.CpuUsage;
-  loadAverage: number[];
-  freeMemory: number;
-  totalMemory: number;
-}
+// Removed unused SystemMetrics interface
 
 export class HealthMonitor extends EventEmitter {
   private config: HealthConfig;
@@ -201,7 +193,7 @@ export class HealthMonitor extends EventEmitter {
         try {
           const metrics = await this.jobManager.getQueueMetrics() as Record<string, QueueMetrics>;
           
-          for (const [queueName, queueMetrics] of Object.entries(metrics)) {
+          for (const [_queueName, queueMetrics] of Object.entries(metrics)) {
             const totalJobs = queueMetrics.completed + queueMetrics.failed;
             if (totalJobs > 0) {
               const failureRate = queueMetrics.failed / totalJobs;
@@ -413,22 +405,7 @@ export class HealthMonitor extends EventEmitter {
     }, 0);
   }
 
-  private getSystemMetrics(): SystemMetrics {
-    const memoryUsage = process.memoryUsage();
-    const cpuUsage = process.cpuUsage();
-    const loadAverage = require('os').loadavg();
-    const freeMemory = require('os').freemem();
-    const totalMemory = require('os').totalmem();
-
-    return {
-      uptime: process.uptime(),
-      memoryUsage,
-      cpuUsage,
-      loadAverage,
-      freeMemory,
-      totalMemory
-    };
-  }
+  // Removed unused _getSystemMetrics method
 
   updateThresholds(newThresholds: Partial<typeof this.alertThresholds>): void {
     this.alertThresholds = { ...this.alertThresholds, ...newThresholds };

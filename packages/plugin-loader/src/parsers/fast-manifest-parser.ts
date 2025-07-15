@@ -1,10 +1,14 @@
-import Ajv, { ValidateFunction } from 'ajv';
-import addFormats from 'ajv-formats';
+import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { PluginManifest, PluginValidationResult } from '../types/plugin';
+
+import type { ValidateFunction } from 'ajv';
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 import { LRUCache } from 'lru-cache';
-import { createHash } from 'crypto';
+
+import type { PluginManifest, PluginValidationResult } from '../types/plugin';
+
 
 export interface ParseOptions {
   validateSchema?: boolean;
@@ -22,7 +26,7 @@ export interface ParseResult {
 
 export class FastManifestParser {
   private static instance: FastManifestParser;
-  
+
   private ajv: Ajv;
   private schemaValidator?: ValidateFunction;
   private cache: LRUCache<string, { manifest: PluginManifest; hash: string }>;
@@ -31,7 +35,7 @@ export class FastManifestParser {
 
   private constructor() {
     // Initialize AJV with optimizations
-    this.ajv = new Ajv({ 
+    this.ajv = new Ajv({
       strict: false, // Faster parsing
       allErrors: true,
       removeAdditional: true, // Clean up extra properties
@@ -39,9 +43,9 @@ export class FastManifestParser {
       coerceTypes: true, // Type coercion for flexibility
       // cache: true // Enable schema caching - not available in Options type
     });
-    
+
     addFormats(this.ajv);
-    
+
     // Initialize LRU cache
     this.cache = new LRUCache<string, { manifest: PluginManifest; hash: string }>({
       max: 100, // Cache up to 100 manifests
@@ -52,7 +56,7 @@ export class FastManifestParser {
 
     // Load and pre-compile schema
     this.schema = this.loadSchema();
-    this.precompileSchema();
+    void this.precompileSchema();
   }
 
   static getInstance(): FastManifestParser {
@@ -96,17 +100,17 @@ export class FastManifestParser {
   }
 
   async parseManifest(
-    manifestPath: string, 
+    manifestPath: string,
     options: ParseOptions = {}
   ): Promise<ParseResult> {
     const startTime = Date.now();
-    
+
     try {
       // Check cache first
       const cacheKey = manifestPath;
       const content = readFileSync(manifestPath, 'utf8');
       const contentHash = createHash('sha256').update(content).digest('hex');
-      
+
       const cached = this.cache.get(cacheKey);
       if (cached && cached.hash === contentHash) {
         return {
@@ -162,7 +166,7 @@ export class FastManifestParser {
 
   parseManifestSync(content: string, options: ParseOptions = {}): ParseResult {
     const startTime = Date.now();
-    
+
     try {
       // Parse JSON
       const parsedData = this.parseJSON(content);
@@ -210,7 +214,7 @@ export class FastManifestParser {
       if (content.charCodeAt(0) === 0xFEFF) {
         content = content.slice(1);
       }
-      
+
       // Parse with reviver for optimization
       return JSON.parse(content, (_, value) => {
         // Convert string dates to Date objects if needed
@@ -235,11 +239,11 @@ export class FastManifestParser {
     }
 
     const valid = this.schemaValidator(data);
-    
+
     if (!valid && this.schemaValidator.errors) {
       return {
         valid: false,
-        errors: this.schemaValidator.errors.map(err => 
+        errors: this.schemaValidator.errors.map(err =>
           `${err.instancePath || 'root'}: ${err.message}`
         )
       };
@@ -255,11 +259,11 @@ export class FastManifestParser {
     }
 
     const valid = this.schemaValidator(data);
-    
+
     if (!valid && this.schemaValidator.errors) {
       return {
         valid: false,
-        errors: this.schemaValidator.errors.map(err => 
+        errors: this.schemaValidator.errors.map(err =>
           `${err.instancePath || 'root'}: ${err.message}`
         )
       };
@@ -323,15 +327,15 @@ export class FastManifestParser {
 
   // Batch parsing for efficiency
   async parseManifestBatch(
-    manifestPaths: string[], 
+    manifestPaths: string[],
     options: ParseOptions = {}
   ): Promise<Map<string, ParseResult>> {
     const results = new Map<string, ParseResult>();
-    
+
     // Process in parallel with concurrency limit
     const concurrency = 5;
     const chunks: string[][] = [];
-    
+
     for (let i = 0; i < manifestPaths.length; i += concurrency) {
       chunks.push(manifestPaths.slice(i, i + concurrency));
     }
@@ -340,7 +344,7 @@ export class FastManifestParser {
       const chunkResults = await Promise.all(
         chunk.map(path => this.parseManifest(path, options))
       );
-      
+
       chunk.forEach((path, index) => {
         const result = chunkResults[index];
         if (result) {
@@ -354,7 +358,7 @@ export class FastManifestParser {
 
   // Stream parsing for large manifests
   async *parseManifestStream(
-    manifestPaths: string[], 
+    manifestPaths: string[],
     options: ParseOptions = {}
   ): AsyncGenerator<{ path: string; result: ParseResult }> {
     for (const path of manifestPaths) {

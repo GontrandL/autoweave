@@ -1,23 +1,25 @@
-import Ajv from 'ajv';
 // @ts-ignore
-import addFormats from 'ajv-formats';
 import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { PluginManifest, PluginValidationResult } from '../types/plugin';
+
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
+
+import type { PluginManifest, PluginValidationResult } from '../types/plugin';
 
 export class PluginManifestValidator {
   private ajv: Ajv;
   private schema: object;
 
   constructor() {
-    this.ajv = new Ajv({ 
-      strict: true, 
+    this.ajv = new Ajv({
+      strict: true,
       allErrors: true,
-      removeAdditional: false 
+      removeAdditional: false
     });
     addFormats(this.ajv);
-    
+
     // Load schema from file
     const schemaPath = join(__dirname, '../schemas/manifest-schema.json');
     this.schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
@@ -26,7 +28,7 @@ export class PluginManifestValidator {
   validateManifest(manifest: object): PluginValidationResult {
     const validate = this.ajv.compile(this.schema);
     const valid = validate(manifest);
-    
+
     if (!valid) {
       return {
         valid: false,
@@ -38,15 +40,15 @@ export class PluginManifestValidator {
   }
 
   validateSignature(manifest: PluginManifest, pluginPath: string): boolean {
-    if (!manifest.signature) return false;
-    
+    if (!manifest.signature) {return false;}
+
     const { signature, ...manifestWithoutSig } = manifest;
     const manifestContent = JSON.stringify(manifestWithoutSig, null, 2);
     const pluginFiles = this.getPluginFiles(pluginPath);
-    
+
     const hash = createHash('sha256');
     hash.update(manifestContent);
-    
+
     pluginFiles.forEach(file => {
       try {
         hash.update(readFileSync(file));
@@ -54,7 +56,7 @@ export class PluginManifestValidator {
         console.warn(`Could not read file ${file} for signature validation:`, error);
       }
     });
-    
+
     const computedHash = hash.digest('hex');
     return computedHash === signature.value;
   }
@@ -64,17 +66,17 @@ export class PluginManifestValidator {
     // excluding node_modules, .git, etc.
     const fs = require('fs');
     const path = require('path');
-    
+
     const files: string[] = [];
     const excludeDirs = ['node_modules', '.git', 'dist', 'build', '.cache'];
-    
+
     function walkDir(dir: string): void {
       try {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
-        
+
         for (const entry of entries) {
           const fullPath = path.join(dir, entry.name);
-          
+
           if (entry.isDirectory()) {
             if (!excludeDirs.includes(entry.name)) {
               walkDir(fullPath);
@@ -90,19 +92,19 @@ export class PluginManifestValidator {
         console.warn(`Could not read directory ${dir}:`, error);
       }
     }
-    
+
     walkDir(pluginPath);
     return files.sort(); // Ensure consistent ordering
   }
 
   generatePluginSignature(manifest: PluginManifest, pluginPath: string): string {
-    const { signature, ...manifestWithoutSig } = manifest;
+    const { signature: _signature, ...manifestWithoutSig } = manifest;
     const manifestContent = JSON.stringify(manifestWithoutSig, null, 2);
     const pluginFiles = this.getPluginFiles(pluginPath);
-    
+
     const hash = createHash('sha256');
     hash.update(manifestContent);
-    
+
     pluginFiles.forEach(file => {
       try {
         hash.update(readFileSync(file));
@@ -110,7 +112,7 @@ export class PluginManifestValidator {
         console.warn(`Could not read file ${file} for signature generation:`, error);
       }
     });
-    
+
     return hash.digest('hex');
   }
 }

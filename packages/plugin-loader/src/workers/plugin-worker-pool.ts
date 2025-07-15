@@ -1,6 +1,10 @@
 import { EventEmitter } from 'events';
-import { SecurePluginWorker, SecureWorkerOptions } from './secure-plugin-worker';
-import { PluginManifest } from '../types/plugin';
+
+import type { PluginManifest } from '../types/plugin';
+
+import type { SecureWorkerOptions } from './secure-plugin-worker';
+import { SecurePluginWorker } from './secure-plugin-worker';
+
 
 export interface PoolOptions {
   minWorkers?: number;
@@ -40,13 +44,13 @@ export class PluginWorkerPool extends EventEmitter {
   async start(): Promise<void> {
     // Start health check timer
     this.healthCheckTimer = setInterval(
-      () => this.performHealthCheck(),
+      () => { void this.performHealthCheck(); },
       this.options.healthCheckInterval
     );
 
     // Start cleanup timer
     this.cleanupTimer = setInterval(
-      () => this.cleanupIdleWorkers(),
+      () => { void this.cleanupIdleWorkers(); },
       this.options.workerIdleTimeout / 2
     );
 
@@ -66,16 +70,16 @@ export class PluginWorkerPool extends EventEmitter {
     const terminatePromises = Array.from(this.workers.values()).map(
       info => info.worker.terminate()
     );
-    
+
     await Promise.all(terminatePromises);
     this.workers.clear();
-    
+
     console.log('Plugin worker pool stopped');
   }
 
   async getWorker(manifest: PluginManifest, pluginPath: string): Promise<SecurePluginWorker> {
     const pluginId = `${manifest.name}@${manifest.version}`;
-    
+
     // Check if we have an existing healthy worker
     const existingInfo = this.workers.get(pluginId);
     if (existingInfo && existingInfo.health.healthy && !existingInfo.busy) {
@@ -112,14 +116,14 @@ export class PluginWorkerPool extends EventEmitter {
 
     this.workers.set(pluginId, info);
     this.emit('worker:created', { pluginId, manifest });
-    
+
     return worker;
   }
 
   releaseWorker(manifest: PluginManifest): void {
     const pluginId = `${manifest.name}@${manifest.version}`;
     const info = this.workers.get(pluginId);
-    
+
     if (info) {
       info.busy = false;
       info.lastUsed = Date.now();
@@ -127,7 +131,7 @@ export class PluginWorkerPool extends EventEmitter {
   }
 
   private async createWorker(
-    manifest: PluginManifest, 
+    manifest: PluginManifest,
     pluginPath: string
   ): Promise<SecurePluginWorker> {
     const workerOptions: SecureWorkerOptions = {
@@ -141,7 +145,7 @@ export class PluginWorkerPool extends EventEmitter {
     };
 
     const worker = new SecurePluginWorker(workerOptions);
-    
+
     // Set up error handling
     worker.on('error', (error) => {
       this.handleWorkerError(manifest, error);
@@ -154,7 +158,7 @@ export class PluginWorkerPool extends EventEmitter {
     // Initialize and load
     await worker.initialize();
     await worker.load();
-    
+
     return worker;
   }
 
@@ -185,7 +189,7 @@ export class PluginWorkerPool extends EventEmitter {
   private async checkWorkerHealth(pluginId: string, info: WorkerInfo): Promise<void> {
     try {
       // Simple health check - send a ping message
-      const timeout = new Promise((_, reject) => 
+      const timeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Health check timeout')), 5000)
       );
 
@@ -215,13 +219,13 @@ export class PluginWorkerPool extends EventEmitter {
 
   private async terminateUnhealthyWorker(pluginId: string, info: WorkerInfo): Promise<void> {
     console.log(`Terminating unhealthy worker ${pluginId}`);
-    
+
     try {
       await info.worker.terminate();
     } catch (error) {
       console.error(`Error terminating worker ${pluginId}:`, error);
     }
-    
+
     this.workers.delete(pluginId);
     this.emit('worker:terminated', { pluginId, reason: 'unhealthy' });
   }
@@ -257,7 +261,7 @@ export class PluginWorkerPool extends EventEmitter {
   private handleWorkerError(manifest: PluginManifest, error: Error): void {
     const pluginId = `${manifest.name}@${manifest.version}`;
     const info = this.workers.get(pluginId);
-    
+
     if (info) {
       info.health.errorCount++;
       console.error(`Worker error for ${pluginId}:`, error);
@@ -267,10 +271,10 @@ export class PluginWorkerPool extends EventEmitter {
 
   private handleWorkerExit(manifest: PluginManifest, code: number): void {
     const pluginId = `${manifest.name}@${manifest.version}`;
-    
+
     // Remove worker from pool
     this.workers.delete(pluginId);
-    
+
     console.log(`Worker ${pluginId} exited with code ${code}`);
     this.emit('worker:exit', { pluginId, code });
   }
@@ -286,8 +290,8 @@ export class PluginWorkerPool extends EventEmitter {
     let healthyWorkers = 0;
 
     for (const info of this.workers.values()) {
-      if (info.busy) busyWorkers++;
-      if (info.health.healthy) healthyWorkers++;
+      if (info.busy) {busyWorkers++;}
+      if (info.health.healthy) {healthyWorkers++;}
     }
 
     const totalWorkers = this.workers.size;
@@ -306,7 +310,7 @@ export class PluginWorkerPool extends EventEmitter {
   getWorkerMetrics(manifest: PluginManifest): any {
     const pluginId = `${manifest.name}@${manifest.version}`;
     const info = this.workers.get(pluginId);
-    
+
     if (!info) {
       return null;
     }
