@@ -362,7 +362,7 @@ export class EnhancedPluginManager extends EventEmitter {
         );
 
         if (allowed) {
-          instance.worker.sendUSBEvent(eventType, deviceInfo).catch(error => {
+          instance.worker.sendUSBEvent(eventType, deviceInfo).catch((error: Error) => {
             console.error(`Error sending USB event to ${instance.manifest.name}:`, error);
           });
         } else {
@@ -375,7 +375,7 @@ export class EnhancedPluginManager extends EventEmitter {
   sendJobToPlugin(pluginName: string, jobData: any): void {
     const entry = this.registry[pluginName];
     if (entry && entry.instance.worker) {
-      entry.instance.worker.sendJob(jobData).catch(error => {
+      entry.instance.worker.sendJob(jobData).catch((error: Error) => {
         console.error(`Error sending job to ${pluginName}:`, error);
       });
     }

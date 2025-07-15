@@ -226,3 +226,7 @@ export function getLogger(): AutoWeaveLogger {
   }
   return globalLogger;
 }
+
+export function shutdownLogging(): void {
+  globalLogger = undefined;
+}

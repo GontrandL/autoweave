@@ -3,10 +3,10 @@
 
 # Define multiple schemas for AutoWeave's distributed GraphQL architecture
 schema:
-  # Main GraphQL Gateway (WunderGraph Cosmo)
-  - "http://localhost:4000/graphql"
-  # Local schema files for development
+  # Local schema files for development and build
   - "src/schemas/*.graphql"
+  # Main GraphQL Gateway (WunderGraph Cosmo) - optional, only when server is running
+  # - "http://localhost:4000/graphql"
 
 # Input documents (queries, mutations, subscriptions)
 documents:
@@ -85,10 +85,15 @@ generates:
         Plugin: "../models#PluginModel"
         Memory: "../models#MemoryModel"
         Queue: "../models#QueueModel"
+      # Type-safe configuration
+      scalars:
+        DateTime: "string"
+        JSON: "any"
+        Upload: "File"
       # Strict resolver typing
       strictScalars: true
-      # Federation support for WunderGraph Cosmo
-      federation: true
+      # Federation support disabled for local builds
+      federation: false
 
 # Plugin configuration
 config:
@@ -107,18 +112,16 @@ config:
   inlineFragmentTypes: "combine"
   preResolveTypes: true
 
-# Watch mode for development
-watch: true
+# Watch mode for development (disabled for builds)
+watch: false
 
 # Hooks for integration with AutoWeave build system
 hooks:
-  afterOneFileWrite:
-    - "eslint --fix"
   afterAllFileWrite:
-    - "prettier --write src/generated/**/*.{ts,tsx}"
+    - "prettier --write src/generated/**/*.{ts,tsx,json}"
 
-# Error handling
-onError: "throw"
+# Error handling - warn instead of throwing to allow builds without server
+onError: "warn"
 
 # Require configuration for better error messages
 require:

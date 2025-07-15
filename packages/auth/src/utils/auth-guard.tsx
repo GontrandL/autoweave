@@ -18,7 +18,7 @@ export function AuthGuard({
   fallback = <div>Access denied</div>,
 }: AuthGuardProps) {
   const { user, loading } = useAuth()
-  const { hasPermission, hasAnyPermission, hasAllPermissions } = usePermission()
+  const { hasAnyPermission, hasAllPermissions } = usePermission()
 
   if (loading) {
     return <div>Loading...</div>

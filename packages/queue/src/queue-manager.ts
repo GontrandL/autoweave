@@ -1,4 +1,3 @@
-// @ts-ignore
 import { Queue, Worker, Job, QueueEvents } from 'bullmq';
 import { EventEmitter } from 'events';
 import { 
@@ -92,8 +91,8 @@ export class AutoWeaveQueue extends EventEmitter {
     return this.queue.getJob(jobId);
   }
 
-  async getJobs(types: string[] = ['waiting', 'active', 'completed', 'failed'], start = 0, end = -1): Promise<Job<AutoWeaveJobData>[]> {
-    return this.queue.getJobs(types, start, end);
+  async getJobs(types: ('waiting' | 'active' | 'completed' | 'failed' | 'delayed' | 'paused')[] = ['waiting', 'active', 'completed', 'failed'], start = 0, end = -1): Promise<Job<AutoWeaveJobData>[]> {
+    return this.queue.getJobs(types as any, start, end);
   }
 
   async getJobCounts(): Promise<QueueMetrics> {

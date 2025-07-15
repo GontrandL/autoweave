@@ -1,5 +1,5 @@
 // @ts-ignore
-import * as usb from 'usb';
+import { usb } from 'usb';
 import { USBDeviceInfo } from '../types';
 import { createHash } from 'crypto';
 

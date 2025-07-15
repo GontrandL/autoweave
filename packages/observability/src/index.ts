@@ -5,9 +5,9 @@ export { AutoWeaveLogger, initializeLogging, getLogger, shutdownLogging } from '
 export { HealthMonitor } from './health/health-monitor';
 export { SLISLOManager } from './sli-slo/sli-slo-manager';
 export { TenantIsolationManager } from './security/tenant-isolation';
-export { TraceCorrelator } from './performance/trace-correlation';
+export { TraceCorrelationManager as TraceCorrelator } from './performance/trace-correlation';
 export { PerformanceOptimizer } from './performance/performance-optimizer';
-export { ObservabilityManager, initializeObservability, getObservability, shutdownObservability } from './observability-manager';
+export { ObservabilityManager, initializeObservability, getObservabilityManager as getObservability, shutdownObservability } from './observability-manager';
 
 // Types and interfaces
 export type { TracingConfig, USBEventSpanOptions, PluginSpanOptions, JobQueueSpanOptions } from './tracing/tracer';

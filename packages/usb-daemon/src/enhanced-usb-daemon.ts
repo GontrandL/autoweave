@@ -1,5 +1,5 @@
 // @ts-ignore
-import * as usb from 'usb';
+import { usb } from 'usb';
 import { EventEmitter } from 'events';
 import { USBDeviceInfo, USBDaemonConfig } from './types';
 import { USBEventDebouncer } from './core/event-debouncer';
@@ -38,10 +38,10 @@ export class EnhancedUSBDaemon extends EventEmitter {
   private connectedDevices = new Map<string, USBDeviceInfo>();
   
   // Core components
-  private eventDebouncer: USBEventDebouncer;
-  private deviceExtractor: OptimizedDeviceExtractor;
-  private batchPublisher: BatchRedisPublisher;
-  private memoryManager: USBDaemonMemoryManager;
+  private eventDebouncer!: USBEventDebouncer;
+  private deviceExtractor!: OptimizedDeviceExtractor;
+  private batchPublisher!: BatchRedisPublisher;
+  private memoryManager!: USBDaemonMemoryManager;
   private healthServer?: HealthCheckServer;
   
   // Platform info
@@ -113,7 +113,6 @@ export class EnhancedUSBDaemon extends EventEmitter {
     // USB event handlers
     usb.on('attach', this.handleDeviceAttach.bind(this));
     usb.on('detach', this.handleDeviceDetach.bind(this));
-    usb.on('error', this.handleUSBError.bind(this));
     
     // Debouncer event handler
     this.eventDebouncer.on('batch', this.processBatch.bind(this));

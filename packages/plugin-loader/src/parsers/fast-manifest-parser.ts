@@ -37,7 +37,7 @@ export class FastManifestParser {
       removeAdditional: true, // Clean up extra properties
       useDefaults: true, // Apply defaults from schema
       coerceTypes: true, // Type coercion for flexibility
-      cache: true // Enable schema caching
+      // cache: true // Enable schema caching - not available in Options type
     });
     
     addFormats(this.ajv);
@@ -212,7 +212,7 @@ export class FastManifestParser {
       }
       
       // Parse with reviver for optimization
-      return JSON.parse(content, (key, value) => {
+      return JSON.parse(content, (_, value) => {
         // Convert string dates to Date objects if needed
         if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
           return new Date(value);
@@ -342,7 +342,10 @@ export class FastManifestParser {
       );
       
       chunk.forEach((path, index) => {
-        results.set(path, chunkResults[index]);
+        const result = chunkResults[index];
+        if (result) {
+          results.set(path, result);
+        }
       });
     }
 

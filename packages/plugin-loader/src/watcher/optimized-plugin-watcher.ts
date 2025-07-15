@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { watch, FSWatcher } from 'chokidar';
 import { createHash } from 'crypto';
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 
 export interface WatcherOptions {
   debounceMs?: number;

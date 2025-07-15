@@ -163,7 +163,7 @@ export class SecurePluginWorker extends EventEmitter {
     }
     
     // Clean up pending requests
-    for (const [id, { reject }] of this.pendingRequests) {
+    for (const [, { reject }] of this.pendingRequests) {
       reject(new Error('Worker exited'));
     }
     this.pendingRequests.clear();
@@ -293,7 +293,7 @@ export class SecurePluginWorker extends EventEmitter {
     }
     
     // Clean up pending requests
-    for (const [id, { reject }] of this.pendingRequests) {
+    for (const [, { reject }] of this.pendingRequests) {
       reject(new Error('Worker terminated'));
     }
     this.pendingRequests.clear();

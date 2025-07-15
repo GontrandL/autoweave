@@ -1,6 +1,6 @@
 // Generic types to avoid BullMQ dependency in types
 export interface GenericJob<T = any> {
-  id: string | undefined;
+  id?: string | undefined;
   data: T;
   opts: any;
 }
@@ -90,7 +90,7 @@ export interface QueueConfig {
 export interface WorkerConfig {
   queueName: string;
   concurrency?: number;
-  processor: string | ((job: GenericJob<AutoWeaveJobData>) => Promise<any>);
+  processor: string | ((job: any) => Promise<any>);
   redis: {
     host: string;
     port: number;

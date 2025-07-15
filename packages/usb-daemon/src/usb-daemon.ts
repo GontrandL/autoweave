@@ -1,5 +1,5 @@
 // @ts-ignore
-import * as usb from 'usb';
+import { usb } from 'usb';
 import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
 import { USBDeviceInfo, USBDaemonConfig, USBMonitoringConfig } from './types';
@@ -10,6 +10,8 @@ export class USBDaemon extends EventEmitter {
   private connectedDevices = new Map<string, USBDeviceInfo>();
   private _monitoringConfig: USBMonitoringConfig;
   private eventPublisher: USBEventPublisher;
+  private attachHandler: (device: usb.Device) => Promise<void>;
+  private detachHandler: (device: usb.Device) => Promise<void>;
 
   constructor(config: USBDaemonConfig) {
     super();
@@ -20,16 +22,15 @@ export class USBDaemon extends EventEmitter {
     };
     
     this.eventPublisher = new USBEventPublisher(config.redis);
+    this.attachHandler = this.handleDeviceAttach.bind(this);
+    this.detachHandler = this.handleDeviceDetach.bind(this);
     this.setupUSBEventHandlers();
   }
 
   private setupUSBEventHandlers(): void {
     // Primary: node-usb events
-    usb.on('attach', this.handleDeviceAttach.bind(this));
-    usb.on('detach', this.handleDeviceDetach.bind(this));
-    
-    // Error handling
-    usb.on('error', this.handleUSBError.bind(this));
+    usb.on('attach', this.attachHandler);
+    usb.on('detach', this.detachHandler);
   }
 
   private async handleDeviceAttach(device: usb.Device): Promise<void> {
@@ -179,8 +180,9 @@ export class USBDaemon extends EventEmitter {
     this.isRunning = false;
     this.connectedDevices.clear();
     
-    // Cleanup node-usb
-    usb.removeAllListeners();
+    // Cleanup node-usb event listeners
+    usb.off('attach', this.attachHandler);
+    usb.off('detach', this.detachHandler);
     
     // Close Redis connection
     await this.eventPublisher.close();

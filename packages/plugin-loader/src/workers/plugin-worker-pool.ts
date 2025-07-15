@@ -24,8 +24,8 @@ export interface WorkerInfo {
 export class PluginWorkerPool extends EventEmitter {
   private workers = new Map<string, WorkerInfo>();
   private options: Required<PoolOptions>;
-  private healthCheckTimer?: NodeJS.Timer;
-  private cleanupTimer?: NodeJS.Timer;
+  private healthCheckTimer?: NodeJS.Timeout;
+  private cleanupTimer?: NodeJS.Timeout;
 
   constructor(options: PoolOptions = {}) {
     super();

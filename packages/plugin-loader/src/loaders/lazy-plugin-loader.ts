@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 import { PluginManifest, PluginInstance } from '../types/plugin';
-import { SecurePluginWorker } from '../workers/secure-plugin-worker';
+// import { SecurePluginWorker } from '../workers/secure-plugin-worker';
 import { PluginWorkerPool } from '../workers/plugin-worker-pool';
-import { FastManifestParser } from '../parsers/fast-manifest-parser';
+// import { FastManifestParser } from '../parsers/fast-manifest-parser';
 
 export enum PluginPriority {
   CRITICAL = 0,
@@ -42,7 +42,7 @@ export class LazyPluginLoader extends EventEmitter {
   private loadedPlugins = new Map<string, PluginInstance>();
   private pluginProxies = new Map<string, PluginInstance>();
   private workerPool: PluginWorkerPool;
-  private manifestParser: FastManifestParser;
+  // private manifestParser: FastManifestParser;
   private options: Required<LazyLoadOptions>;
   private loadMetrics: LoadMetrics;
   private isProcessing = false;
@@ -50,7 +50,7 @@ export class LazyPluginLoader extends EventEmitter {
   constructor(workerPool: PluginWorkerPool, options: LazyLoadOptions = {}) {
     super();
     this.workerPool = workerPool;
-    this.manifestParser = FastManifestParser.getInstance();
+    // this.manifestParser = FastManifestParser.getInstance();
     
     this.options = {
       preloadQueue: options.preloadQueue || [],
@@ -204,7 +204,7 @@ export class LazyPluginLoader extends EventEmitter {
     if (existingIndex >= 0) {
       // Update priority if higher
       const existing = this.loadQueue[existingIndex];
-      if (priority < existing.priority) {
+      if (existing && priority < existing.priority) {
         existing.priority = priority;
         this.sortLoadQueue();
       }

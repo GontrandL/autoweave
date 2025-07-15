@@ -17,6 +17,39 @@ interface AuthContextType {
   loading: boolean
 }
 
+interface LoginResponse {
+  user: User
+  token: string
+}
+
+interface ValidateResponse {
+  id: string
+  email: string
+  name: string
+  role: 'admin' | 'developer' | 'user'
+  avatar?: string
+}
+
+// Storage abstraction that works in both client and server environments
+const storage = {
+  getItem: (key: string): string | null => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem(key)
+    }
+    return null
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(key, value)
+    }
+  },
+  removeItem: (key: string): void => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem(key)
+    }
+  }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function useAuth() {
@@ -37,7 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     // Check for stored auth token and validate
-    const token = localStorage.getItem('auth-token')
+    const token = storage.getItem('auth-token')
     if (token) {
       // Validate token and get user info
       validateToken(token)
@@ -55,14 +88,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       
       if (response.ok) {
-        const userData = await response.json()
+        const userData = await response.json() as ValidateResponse
         setUser(userData)
       } else {
-        localStorage.removeItem('auth-token')
+        storage.removeItem('auth-token')
       }
     } catch (error) {
       console.error('Token validation failed:', error)
-      localStorage.removeItem('auth-token')
+      storage.removeItem('auth-token')
     } finally {
       setLoading(false)
     }
@@ -80,8 +113,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
 
       if (response.ok) {
-        const { user: userData, token } = await response.json()
-        localStorage.setItem('auth-token', token)
+        const { user: userData, token } = await response.json() as LoginResponse
+        storage.setItem('auth-token', token)
         setUser(userData)
       } else {
         throw new Error('Login failed')
@@ -97,16 +130,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = async () => {
     setLoading(true)
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth-token')}`,
-        },
-      })
+      const token = storage.getItem('auth-token')
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+      }
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
-      localStorage.removeItem('auth-token')
+      storage.removeItem('auth-token')
       setUser(null)
       setLoading(false)
     }

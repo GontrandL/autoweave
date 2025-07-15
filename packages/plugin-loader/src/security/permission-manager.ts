@@ -1,5 +1,5 @@
 import { PluginPermissions } from '../types/plugin';
-import { normalize, isAbsolute, relative } from 'path';
+import { normalize, isAbsolute } from 'path';
 import { URL } from 'url';
 
 export interface PermissionCheckResult {

@@ -17,7 +17,7 @@ interface PublishStats {
 }
 
 export class BatchRedisPublisher extends EventEmitter {
-  private redis: Redis;
+  private redis!: Redis;
   private batchQueue: BatchEvent[] = [];
   private publishTimer: NodeJS.Timeout | null = null;
   private stats: PublishStats = {
@@ -128,7 +128,7 @@ export class BatchRedisPublisher extends EventEmitter {
       
       // Update stats
       const latency = Date.now() - startTime;
-      this.updateStats(batch.length, latency, results);
+      this.updateStats(batch.length, latency, results || []);
 
       // Check for backpressure
       await this.checkBackpressure();
