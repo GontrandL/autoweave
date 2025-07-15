@@ -1,6 +1,6 @@
 const { Logger } = require('@autoweave/shared');
 const fetch = require('node-fetch');
-const { createAutoWeaveBridge } = require('@autoweave/auto-debugger');
+// const { createAutoWeaveBridge } = require('@autoweave/auto-debugger');
 
 /**
  * DebuggingAgent - Agent intelligent pour le debugging avec OpenTelemetry
@@ -572,6 +572,8 @@ Please provide:
      */
     async initializeAutoDebugger(config) {
         try {
+            // Lazy load to avoid circular dependency
+            const { createAutoWeaveBridge } = require('@autoweave/auto-debugger');
             this.autoDebuggerBridge = createAutoWeaveBridge({
                 mcpPort: config.autoDebuggerPort || 8931,
                 apiUrl: config.apiUrl || 'http://localhost:3000',

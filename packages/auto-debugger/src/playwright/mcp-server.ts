@@ -2,7 +2,13 @@ import { WebSocketServer } from 'ws';
 import { EventEmitter } from 'eventemitter3';
 import { chromium, Browser, BrowserContext } from 'playwright';
 import { AutoDebugger } from '../core/auto-debugger';
-import { getLogger } from '@autoweave/observability';
+// import { getLogger } from '@autoweave/observability';
+const getLogger = (_name: string) => ({
+  info: console.log,
+  warn: console.warn,
+  error: console.error,
+  debug: console.debug
+});
 import type { 
   MCPRequest, 
   MCPResponse, 
@@ -91,7 +97,7 @@ export class PlaywrightMCPServer extends EventEmitter {
    */
   async stop(): Promise<void> {
     // Close all contexts
-    for (const [id, context] of this.contexts) {
+    for (const [, context] of this.contexts) {
       await context.close();
     }
     this.contexts.clear();
@@ -218,19 +224,19 @@ export class PlaywrightMCPServer extends EventEmitter {
       viewport: params.viewport || this.config.viewport,
       userAgent: params.userAgent,
       locale: params.locale,
-      timezone: params.timezone,
+      timezoneId: params.timezone,
       permissions: params.permissions
     });
 
     // Create page
-    const page = await context.newPage();
+    await context.newPage();
     
-    // Create debugger
-    const debugger = new AutoDebugger(params.debugConfig);
+    // Create debugger instance
+    const debuggerInstance = new AutoDebugger(params.debugConfig);
     
     // Store references
     this.contexts.set(sessionId, context);
-    this.debuggers.set(sessionId, debugger);
+    this.debuggers.set(sessionId, debuggerInstance);
     
     // Create session record
     this.sessions.set(sessionId, {
@@ -249,7 +255,7 @@ export class PlaywrightMCPServer extends EventEmitter {
    */
   private async closeSession(sessionId: string): Promise<void> {
     const context = this.contexts.get(sessionId);
-    const debugger = this.debuggers.get(sessionId);
+    const debuggerInstance = this.debuggers.get(sessionId);
     const session = this.sessions.get(sessionId);
 
     if (context) {
@@ -257,8 +263,8 @@ export class PlaywrightMCPServer extends EventEmitter {
       this.contexts.delete(sessionId);
     }
 
-    if (debugger) {
-      await debugger.detach();
+    if (debuggerInstance) {
+      await debuggerInstance.detach();
       this.debuggers.delete(sessionId);
     }
 
@@ -302,29 +308,29 @@ export class PlaywrightMCPServer extends EventEmitter {
    */
   private async startDebugging(sessionId: string): Promise<void> {
     const context = this.contexts.get(sessionId);
-    const debugger = this.debuggers.get(sessionId);
+    const debuggerInstance = this.debuggers.get(sessionId);
     
-    if (!context || !debugger) throw new Error('Session not found');
+    if (!context || !debuggerInstance) throw new Error('Session not found');
 
     const pages = context.pages();
     if (pages.length === 0) throw new Error('No pages in context');
 
-    await debugger.attach(pages[0]);
+    await debuggerInstance.attach(pages[0]);
     
     // Setup event forwarding
-    debugger.on('error', (error) => {
+    debuggerInstance.on('error', (error) => {
       this.emit('debug-error', { sessionId, error });
     });
     
-    debugger.on('console', (log) => {
+    debuggerInstance.on('console', (log) => {
       this.emit('debug-console', { sessionId, log });
     });
     
-    debugger.on('network-error', (issue) => {
+    debuggerInstance.on('network-error', (issue) => {
       this.emit('debug-network', { sessionId, issue });
     });
     
-    debugger.on('suggestions-generated', (suggestions) => {
+    debuggerInstance.on('suggestions-generated', (suggestions) => {
       this.emit('debug-suggestions', { sessionId, suggestions });
     });
   }
@@ -333,21 +339,21 @@ export class PlaywrightMCPServer extends EventEmitter {
    * Stop debugging for a session
    */
   private async stopDebugging(sessionId: string): Promise<void> {
-    const debugger = this.debuggers.get(sessionId);
-    if (!debugger) throw new Error('Debugger not found');
+    const debuggerInstance = this.debuggers.get(sessionId);
+    if (!debuggerInstance) throw new Error('Debugger not found');
 
-    await debugger.detach();
-    debugger.removeAllListeners();
+    await debuggerInstance.detach();
+    debuggerInstance.removeAllListeners();
   }
 
   /**
    * Get debug report for a session
    */
   private async getDebugReport(sessionId: string): Promise<any> {
-    const debugger = this.debuggers.get(sessionId);
-    if (!debugger) throw new Error('Debugger not found');
+    const debuggerInstance = this.debuggers.get(sessionId);
+    if (!debuggerInstance) throw new Error('Debugger not found');
 
-    const report = await debugger.generateReport();
+    const report = await debuggerInstance.generateReport();
     
     // Store in session
     const session = this.sessions.get(sessionId);
@@ -362,10 +368,10 @@ export class PlaywrightMCPServer extends EventEmitter {
    * Clear debug data for a session
    */
   private async clearDebugData(sessionId: string): Promise<void> {
-    const debugger = this.debuggers.get(sessionId);
-    if (!debugger) throw new Error('Debugger not found');
+    const debuggerInstance = this.debuggers.get(sessionId);
+    if (!debuggerInstance) throw new Error('Debugger not found');
 
-    debugger.clear();
+    debuggerInstance.clear();
   }
 
   /**

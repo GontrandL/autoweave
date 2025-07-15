@@ -1,11 +1,19 @@
+// Import types first
+import type { DebuggerConfig, BrowserConfig } from './types';
+
+// Import classes
+import { AutoDebugger } from './core/auto-debugger';
+import { PlaywrightMCPServer } from './playwright/mcp-server';
+import { AutoWeaveBridge } from './integrations/autoweave-bridge';
+
 // Core exports
-export { AutoDebugger } from './core/auto-debugger';
+export { AutoDebugger };
 
 // Playwright MCP exports
-export { PlaywrightMCPServer } from './playwright/mcp-server';
+export { PlaywrightMCPServer };
 
 // Integration exports
-export { AutoWeaveBridge } from './integrations/autoweave-bridge';
+export { AutoWeaveBridge };
 
 // Type exports
 export type {

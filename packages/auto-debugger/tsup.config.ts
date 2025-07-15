@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/playwright/mcp-server.ts'],
   format: ['cjs', 'esm'],
   dts: true,
   splitting: false,
@@ -9,10 +9,7 @@ export default defineConfig({
   clean: true,
   external: [
     'playwright',
-    'playwright-core',
-    '@autoweave/core',
-    '@autoweave/observability',
-    '@autoweave/agents'
+    'playwright-core'
   ],
   target: 'node18'
 });

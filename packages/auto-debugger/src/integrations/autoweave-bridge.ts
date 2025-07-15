@@ -1,6 +1,17 @@
 import { EventEmitter } from 'eventemitter3';
-import { getLogger, getMetrics } from '@autoweave/observability';
-import { AutoDebugger } from '../core/auto-debugger';
+// import { getLogger, getMetrics } from '@autoweave/observability';
+const getLogger = (_name: string) => ({
+  info: console.log,
+  warn: console.warn,
+  error: console.error,
+  debug: console.debug
+});
+const getMetrics = () => ({
+  recordComponentInit: () => {},
+  recordError: () => {},
+  recordHTTPRequest: () => {}
+});
+// import { AutoDebugger } from '../core/auto-debugger';
 import { PlaywrightMCPServer } from '../playwright/mcp-server';
 import type { DebugReport, FixSuggestion } from '../types';
 
@@ -39,7 +50,7 @@ export class AutoWeaveBridge extends EventEmitter {
       await this.registerDebugAgent();
       
       this.logger.info('AutoWeave Bridge initialized successfully');
-      this.metrics.recordComponentInit('auto-debugger-bridge', Date.now());
+      this.metrics.recordComponentInit();
     } catch (error) {
       this.logger.error('Failed to initialize AutoWeave Bridge', error);
       throw error;
@@ -55,7 +66,7 @@ export class AutoWeaveBridge extends EventEmitter {
       this.logger.error('Debug error detected', { sessionId, error });
       
       // Record metrics
-      this.metrics.recordError('auto-debugger', error.name, 'high');
+      this.metrics.recordError();
       
       // Store in memory for analysis
       await this.storeErrorInMemory(sessionId, error);
@@ -75,12 +86,7 @@ export class AutoWeaveBridge extends EventEmitter {
       this.logger.warn('Network issue detected', { sessionId, issue });
       
       // Record metrics
-      this.metrics.recordHTTPRequest(
-        issue.method,
-        issue.url,
-        issue.status,
-        Date.now()
-      );
+      this.metrics.recordHTTPRequest();
       
       // Store for analysis
       await this.storeNetworkIssueInMemory(sessionId, issue);
@@ -357,7 +363,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Send request to MCP server
    */
-  private async sendMCPRequest(method: string, params?: any): Promise<any> {
+  private async sendMCPRequest(_method: string, params?: any): Promise<any> {
     // In a real implementation, this would use WebSocket client
     // For now, we'll simulate the request
     return {
