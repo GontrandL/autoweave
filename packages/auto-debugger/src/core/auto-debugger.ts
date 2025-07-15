@@ -1,5 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
-import { Page, ConsoleMessage, Response } from 'playwright';
+import type { Page, ConsoleMessage, Response } from 'playwright';
+
 // import { getLogger } from '@autoweave/observability';
 const getLogger = (_name: string) => ({
   info: console.log,
@@ -45,9 +46,9 @@ export class AutoDebugger extends EventEmitter {
   /**
    * Attach debugger to a Playwright page
    */
-  async attach(page: Page): Promise<void> {
+  attach(page: Page): void {
     if (this.isActive) {
-      await this.detach();
+      this.detach();
     }
 
     this.page = page;
@@ -62,7 +63,7 @@ export class AutoDebugger extends EventEmitter {
   /**
    * Detach debugger from current page
    */
-  async detach(): Promise<void> {
+  detach(): void {
     if (!this.isActive || !this.page) {
       return;
     }
@@ -79,7 +80,7 @@ export class AutoDebugger extends EventEmitter {
    * Setup event listeners on the page
    */
   private setupListeners(): void {
-    if (!this.page) return;
+    if (!this.page) {return;}
 
     // Capture console logs
     if (this.config.captureConsole) {
@@ -111,16 +112,16 @@ export class AutoDebugger extends EventEmitter {
         const errorEntry: ErrorEntry = {
           name: error.name,
           message: error.message,
-          stack: error.stack || '',
+          stack: error.stack ?? '',
           timestamp: Date.now(),
-          url: this.page?.url() || ''
+          url: this.page?.url() ?? ''
         };
 
         this.errors.push(errorEntry);
         this.emit('error', errorEntry);
 
         if (this.config.autoAnalyze) {
-          this.analyzeError(errorEntry);
+          void this.analyzeError(errorEntry);
         }
       });
     }
@@ -142,7 +143,7 @@ export class AutoDebugger extends EventEmitter {
           this.emit('network-error', issue);
 
           if (this.config.autoAnalyze) {
-            this.analyzeNetworkIssue(issue);
+            void this.analyzeNetworkIssue(issue);
           }
         }
       });
@@ -152,7 +153,7 @@ export class AutoDebugger extends EventEmitter {
         const issue: NetworkIssue = {
           url: request.url(),
           status: 0,
-          statusText: request.failure()?.errorText || 'Request failed',
+          statusText: request.failure()?.errorText ?? 'Request failed',
           timestamp: Date.now(),
           method: request.method(),
           headers: request.headers()
@@ -201,7 +202,7 @@ export class AutoDebugger extends EventEmitter {
   /**
    * Analyze JavaScript error and generate fix suggestions
    */
-  private async analyzeError(error: ErrorEntry): Promise<FixSuggestion[]> {
+  private analyzeError(error: ErrorEntry): FixSuggestion[] {
     const suggestions: FixSuggestion[] = [];
 
     // Variable not defined
@@ -250,7 +251,7 @@ export class AutoDebugger extends EventEmitter {
   /**
    * Analyze network issue and suggest fixes
    */
-  private async analyzeNetworkIssue(issue: NetworkIssue): Promise<FixSuggestion[]> {
+  private analyzeNetworkIssue(issue: NetworkIssue): FixSuggestion[] {
     const suggestions: FixSuggestion[] = [];
 
     // 404 Not Found
@@ -289,10 +290,10 @@ export class AutoDebugger extends EventEmitter {
   /**
    * Generate comprehensive debug report
    */
-  async generateReport(): Promise<DebugReport> {
+  generateReport(): DebugReport {
     const report: DebugReport = {
       timestamp: Date.now(),
-      url: this.page?.url() || '',
+      url: this.page?.url() ?? '',
       logs: [...this.logs],
       errors: [...this.errors],
       networkIssues: [...this.networkIssues],
@@ -308,13 +309,13 @@ export class AutoDebugger extends EventEmitter {
 
     // Generate suggestions for all errors
     for (const error of this.errors) {
-      const errorSuggestions = await this.analyzeError(error);
+      const errorSuggestions = this.analyzeError(error);
       report.suggestions.push(...errorSuggestions);
     }
 
     // Generate suggestions for network issues
     for (const issue of this.networkIssues) {
-      const networkSuggestions = await this.analyzeNetworkIssue(issue);
+      const networkSuggestions = this.analyzeNetworkIssue(issue);
       report.suggestions.push(...networkSuggestions);
     }
 
@@ -333,7 +334,7 @@ export class AutoDebugger extends EventEmitter {
   /**
    * Get current statistics
    */
-  getStats() {
+  getStats(): { logs: number; errors: number; networkIssues: number; isActive: boolean; url?: string } {
     return {
       logs: this.logs.length,
       errors: this.errors.length,
@@ -363,11 +364,11 @@ export class AutoDebugger extends EventEmitter {
   /**
    * Helper: Categorize errors by type
    */
-  private categorizeErrors() {
+  private categorizeErrors(): Record<string, number> {
     const categories: Record<string, number> = {};
     
     for (const error of this.errors) {
-      categories[error.name] = (categories[error.name] || 0) + 1;
+      categories[error.name] = (categories[error.name] ?? 0) + 1;
     }
     
     return categories;
@@ -383,7 +384,7 @@ export class AutoDebugger extends EventEmitter {
     const errorCounts: Record<string, number> = {};
     for (const error of this.errors) {
       const key = `${error.name}:${error.message}`;
-      errorCounts[key] = (errorCounts[key] || 0) + 1;
+      errorCounts[key] = (errorCounts[key] ?? 0) + 1;
       
       if (errorCounts[key] > 5) {
         critical.push(`Repeated error (${errorCounts[key]}x): ${error.message}`);

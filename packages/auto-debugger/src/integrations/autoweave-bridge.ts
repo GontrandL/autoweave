@@ -1,4 +1,5 @@
 import { EventEmitter } from 'eventemitter3';
+
 // import { getLogger, getMetrics } from '@autoweave/observability';
 const getLogger = (_name: string) => ({
   info: console.log,
@@ -25,7 +26,7 @@ export class AutoWeaveBridge extends EventEmitter {
   private mcpServer: PlaywrightMCPServer;
   private debugSessions: Map<string, DebugReport> = new Map();
 
-  constructor(private autoweaveConfig: any) {
+  constructor(private autoweaveConfig: Record<string, unknown>) {
     super();
     this.mcpServer = new PlaywrightMCPServer({
       headless: autoweaveConfig.headless ?? true,
@@ -44,15 +45,15 @@ export class AutoWeaveBridge extends EventEmitter {
       await this.mcpServer.start(this.autoweaveConfig.mcpPort || 8931);
       
       // Connect to AutoWeave memory system
-      await this.connectToMemory();
+      this.connectToMemory();
       
       // Register with agent system
-      await this.registerDebugAgent();
+      this.registerDebugAgent();
       
       this.logger.info('AutoWeave Bridge initialized successfully');
       this.metrics.recordComponentInit();
     } catch (error) {
-      this.logger.error('Failed to initialize AutoWeave Bridge', error);
+      this.logger.error('Failed to initialize AutoWeave Bridge', error as Error);
       throw error;
     }
   }
@@ -62,49 +63,49 @@ export class AutoWeaveBridge extends EventEmitter {
    */
   private setupEventHandlers(): void {
     // Forward debug events to AutoWeave
-    this.mcpServer.on('debug-error', async ({ sessionId, error }) => {
+    this.mcpServer.on('debug-error', ({ sessionId, error }: { sessionId: string; error: Error }) => {
       this.logger.error('Debug error detected', { sessionId, error });
       
       // Record metrics
       this.metrics.recordError();
       
       // Store in memory for analysis
-      await this.storeErrorInMemory(sessionId, error);
+      void this.storeErrorInMemory(sessionId, error);
       
       // Emit for AutoWeave agents
       this.emit('error-detected', { sessionId, error });
     });
 
-    this.mcpServer.on('debug-console', ({ sessionId, log }) => {
+    this.mcpServer.on('debug-console', ({ sessionId, log }: { sessionId: string; log: { type: string } }) => {
       if (log.type === 'error' || log.type === 'warning') {
         this.logger.warn('Console issue detected', { sessionId, log });
         this.emit('console-issue', { sessionId, log });
       }
     });
 
-    this.mcpServer.on('debug-network', async ({ sessionId, issue }) => {
+    this.mcpServer.on('debug-network', ({ sessionId, issue }: { sessionId: string; issue: unknown }) => {
       this.logger.warn('Network issue detected', { sessionId, issue });
       
       // Record metrics
       this.metrics.recordHTTPRequest();
       
       // Store for analysis
-      await this.storeNetworkIssueInMemory(sessionId, issue);
+      void this.storeNetworkIssueInMemory(sessionId, issue);
       
       this.emit('network-issue', { sessionId, issue });
     });
 
-    this.mcpServer.on('debug-suggestions', async ({ sessionId, suggestions }) => {
+    this.mcpServer.on('debug-suggestions', ({ sessionId, suggestions }: { sessionId: string; suggestions: FixSuggestion[] }) => {
       this.logger.info('Fix suggestions generated', { 
         sessionId, 
         count: suggestions.length 
       });
       
       // Process and enhance suggestions
-      const enhancedSuggestions = await this.enhanceSuggestions(suggestions);
+      const enhancedSuggestions = this.enhanceSuggestions(suggestions);
       
       // Store in memory
-      await this.storeSuggestionsInMemory(sessionId, enhancedSuggestions);
+      void this.storeSuggestionsInMemory(sessionId, enhancedSuggestions);
       
       // Emit for AutoWeave agents
       this.emit('suggestions-ready', { sessionId, suggestions: enhancedSuggestions });
@@ -114,7 +115,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Connect to AutoWeave memory system
    */
-  private async connectToMemory(): Promise<void> {
+  private connectToMemory(): void {
     // This would connect to the actual AutoWeave memory system
     // For now, we'll simulate the connection
     this.logger.info('Connected to AutoWeave memory system');
@@ -123,7 +124,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Register debug agent with AutoWeave agent system
    */
-  private async registerDebugAgent(): Promise<void> {
+  private registerDebugAgent(): void {
     // Register capabilities with AutoWeave agent registry
     const agentDefinition = {
       name: 'auto-debugger',
@@ -135,7 +136,7 @@ export class AutoWeaveBridge extends EventEmitter {
         'performance-analysis'
       ],
       endpoints: {
-        mcp: `ws://localhost:${this.autoweaveConfig.mcpPort || 8931}`
+        mcp: `ws://localhost:${(this.autoweaveConfig.mcpPort as number | undefined) ?? 8931}`
       }
     };
 
@@ -146,10 +147,10 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Create a debug session for a workflow
    */
-  async createDebugSession(workflowId: string, url: string): Promise<string> {
+  createDebugSession(workflowId: string, url: string): string {
     try {
       // Create MCP session
-      const response = await this.sendMCPRequest('createSession', {
+      const response = this.sendMCPRequest('createSession', {
         debugConfig: {
           captureConsole: true,
           captureErrors: true,
@@ -158,20 +159,20 @@ export class AutoWeaveBridge extends EventEmitter {
         }
       });
       
-      const sessionId = response.result;
+      const sessionId = response.result as string;
       
       // Navigate to URL
-      await this.sendMCPRequest('navigate', { sessionId, url });
+      void this.sendMCPRequest('navigate', { sessionId, url });
       
       // Start debugging
-      await this.sendMCPRequest('startDebugging', { sessionId });
+      void this.sendMCPRequest('startDebugging', { sessionId });
       
       // Track session
       this.emit('session-created', { workflowId, sessionId, url });
       
       return sessionId;
     } catch (error) {
-      this.logger.error('Failed to create debug session', error);
+      this.logger.error('Failed to create debug session', error as Error);
       throw error;
     }
   }
@@ -179,23 +180,23 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Analyze workflow for errors
    */
-  async analyzeWorkflow(sessionId: string): Promise<DebugReport> {
+  analyzeWorkflow(sessionId: string): DebugReport {
     try {
       // Get debug report
-      const response = await this.sendMCPRequest('getDebugReport', { sessionId });
-      const report = response.result;
+      const response = this.sendMCPRequest('getDebugReport', { sessionId });
+      const report = response.result as DebugReport;
       
       // Store report
       this.debugSessions.set(sessionId, report);
       
       // Analyze with AI if critical issues found
       if (report.summary.criticalIssues.length > 0) {
-        await this.requestAIAnalysis(sessionId, report);
+        this.requestAIAnalysis(sessionId, report);
       }
       
       return report;
     } catch (error) {
-      this.logger.error('Failed to analyze workflow', error);
+      this.logger.error('Failed to analyze workflow', error as Error);
       throw error;
     }
   }
@@ -211,13 +212,13 @@ export class AutoWeaveBridge extends EventEmitter {
         // Execute fix based on type
         switch (fix.type) {
           case 'variable_declaration':
-            await this.applyVariableFix(sessionId, fix);
+            void this.applyVariableFix(sessionId, fix);
             break;
           case 'null_check':
-            await this.applyNullCheckFix(sessionId, fix);
+            this.applyNullCheckFix(sessionId, fix);
             break;
           case 'server_error':
-            await this.applyRetryFix(sessionId, fix);
+            this.applyRetryFix(sessionId, fix);
             break;
           default:
             this.logger.warn('Unknown fix type', { type: fix.type });
@@ -226,7 +227,7 @@ export class AutoWeaveBridge extends EventEmitter {
       
       // Re-analyze after fixes
       await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for fixes to take effect
-      const newReport = await this.analyzeWorkflow(sessionId);
+      const newReport = this.analyzeWorkflow(sessionId);
       
       // Check if fixes were effective
       const improvement = this.calculateImprovement(
@@ -236,7 +237,7 @@ export class AutoWeaveBridge extends EventEmitter {
       
       this.emit('fixes-applied', { sessionId, improvement });
     } catch (error) {
-      this.logger.error('Failed to apply fixes', error);
+      this.logger.error('Failed to apply fixes', error as Error);
       throw error;
     }
   }
@@ -244,7 +245,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Enhance suggestions with AutoWeave context
    */
-  private async enhanceSuggestions(suggestions: FixSuggestion[]): Promise<FixSuggestion[]> {
+  private enhanceSuggestions(suggestions: FixSuggestion[]): FixSuggestion[] {
     // Add AutoWeave-specific context to suggestions
     return suggestions.map(suggestion => ({
       ...suggestion,
@@ -262,7 +263,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Store error in memory for future reference
    */
-  private async storeErrorInMemory(sessionId: string, error: any): Promise<void> {
+  private storeErrorInMemory(sessionId: string, error: Error): void {
     // This would store in AutoWeave's memory system
     this.logger.debug('Storing error in memory', { sessionId, error });
   }
@@ -270,7 +271,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Store network issue in memory
    */
-  private async storeNetworkIssueInMemory(sessionId: string, issue: any): Promise<void> {
+  private storeNetworkIssueInMemory(sessionId: string, issue: unknown): void {
     // This would store in AutoWeave's memory system
     this.logger.debug('Storing network issue in memory', { sessionId, issue });
   }
@@ -278,7 +279,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Store suggestions in memory
    */
-  private async storeSuggestionsInMemory(sessionId: string, suggestions: FixSuggestion[]): Promise<void> {
+  private storeSuggestionsInMemory(sessionId: string, suggestions: FixSuggestion[]): void {
     // This would store in AutoWeave's memory system
     this.logger.debug('Storing suggestions in memory', { 
       sessionId, 
@@ -289,7 +290,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Request AI analysis for complex issues
    */
-  private async requestAIAnalysis(sessionId: string, report: DebugReport): Promise<void> {
+  private requestAIAnalysis(sessionId: string, report: DebugReport): void {
     this.logger.info('Requesting AI analysis for critical issues', {
       sessionId,
       criticalCount: report.summary.criticalIssues.length
@@ -302,19 +303,19 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Apply variable declaration fix
    */
-  private async applyVariableFix(sessionId: string, fix: FixSuggestion): Promise<void> {
+  private applyVariableFix(sessionId: string, fix: FixSuggestion): void {
     const code = `
       // Auto-generated fix for undefined variable
       ${fix.fix}
     `;
     
-    await this.sendMCPRequest('evaluate', { sessionId, expression: code });
+    void this.sendMCPRequest('evaluate', { sessionId, expression: code });
   }
 
   /**
    * Apply null check fix
    */
-  private async applyNullCheckFix(sessionId: string, fix: FixSuggestion): Promise<void> {
+  private applyNullCheckFix(sessionId: string, fix: FixSuggestion): void {
     // This would inject null checking logic
     this.logger.debug('Applying null check fix', { sessionId, fix });
   }
@@ -322,7 +323,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Apply retry logic fix
    */
-  private async applyRetryFix(sessionId: string, fix: FixSuggestion): Promise<void> {
+  private applyRetryFix(sessionId: string, fix: FixSuggestion): void {
     // This would inject retry logic
     this.logger.debug('Applying retry fix', { sessionId, fix });
   }
@@ -363,7 +364,7 @@ export class AutoWeaveBridge extends EventEmitter {
   /**
    * Send request to MCP server
    */
-  private async sendMCPRequest(_method: string, params?: any): Promise<any> {
+  private sendMCPRequest(_method: string, params?: Record<string, unknown>): { jsonrpc: string; id: number; result: unknown } {
     // In a real implementation, this would use WebSocket client
     // For now, we'll simulate the request
     return {

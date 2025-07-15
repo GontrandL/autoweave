@@ -1,10 +1,9 @@
-// Import types first
-import type { DebuggerConfig, BrowserConfig } from './types';
-
 // Import classes
 import { AutoDebugger } from './core/auto-debugger';
-import { PlaywrightMCPServer } from './playwright/mcp-server';
 import { AutoWeaveBridge } from './integrations/autoweave-bridge';
+import { PlaywrightMCPServer } from './playwright/mcp-server';
+// Import types
+import type { DebuggerConfig, BrowserConfig } from './types';
 
 // Core exports
 export { AutoDebugger };
@@ -31,16 +30,16 @@ export type {
 } from './types';
 
 // Factory function for easy initialization
-export function createAutoDebugger(config?: Partial<DebuggerConfig>) {
+export function createAutoDebugger(config?: Partial<DebuggerConfig>): AutoDebugger {
   return new AutoDebugger(config);
 }
 
 // Factory function for MCP server
-export function createMCPServer(config?: BrowserConfig) {
+export function createMCPServer(config?: BrowserConfig): PlaywrightMCPServer {
   return new PlaywrightMCPServer(config);
 }
 
 // Factory function for AutoWeave integration
-export function createAutoWeaveBridge(autoweaveConfig: any) {
+export function createAutoWeaveBridge(autoweaveConfig: Record<string, unknown>): AutoWeaveBridge {
   return new AutoWeaveBridge(autoweaveConfig);
 }

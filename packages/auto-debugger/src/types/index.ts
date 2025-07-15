@@ -16,7 +16,7 @@ export interface LogEntry {
     lineNumber: number;
     columnNumber: number;
   };
-  args: any[];
+  args: unknown[];
 }
 
 export interface ErrorEntry {
@@ -42,7 +42,7 @@ export interface FixSuggestion {
   message: string;
   fix: string;
   location?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface DebugReport {
@@ -65,17 +65,17 @@ export interface MCPRequest {
   jsonrpc: '2.0';
   id: string | number;
   method: string;
-  params?: any;
+  params?: Record<string, unknown>;
 }
 
 export interface MCPResponse {
   jsonrpc: '2.0';
   id: string | number;
-  result?: any;
+  result?: unknown;
   error?: {
     code: number;
     message: string;
-    data?: any;
+    data?: unknown;
   };
 }
 

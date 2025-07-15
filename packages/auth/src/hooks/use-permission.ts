@@ -39,9 +39,9 @@ export function usePermission() {
   const { user } = useAuth()
 
   const hasPermission = (permission: Permission): boolean => {
-    if (!user) return false
+    if (!user) {return false}
     
-    const userPermissions = rolePermissions[user.role] || []
+    const userPermissions = rolePermissions[user.role] ?? []
     return userPermissions.includes(permission)
   }
 

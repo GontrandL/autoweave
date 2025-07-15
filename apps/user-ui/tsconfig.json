@@ -7,10 +7,25 @@
       }
     ],
     "paths": {
-      "@/*": ["./app/*", "./components/*", "./lib/*"],
-      "@autoweave/ui": ["../../packages/ui/src"]
-    }
+      "@/*": [
+        "./app/*",
+        "./components/*",
+        "./lib/*"
+      ],
+      "@autoweave/ui": [
+        "../../packages/ui/src"
+      ]
+    },
+    "noEmit": true,
+    "jsx": "preserve"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

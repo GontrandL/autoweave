@@ -1,0 +1,3 @@
+dist/
+*.js
+mcp-server.js
