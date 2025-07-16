@@ -1,7 +1,7 @@
 # AutoWeave Production Dockerfile
 # Multi-stage build for optimized production deployment
 
-FROM node:18-alpine AS base
+FROM node:24-alpine AS base
 LABEL maintainer="AutoWeave Team"
 LABEL version="1.0.0"
 LABEL description="AutoWeave - The Self-Weaving Agent Orchestrator"
@@ -43,7 +43,7 @@ COPY . .
 RUN npm run build 2>/dev/null || echo "No build script found"
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:24-alpine AS production
 
 # Install runtime dependencies
 RUN apk add --no-cache \
