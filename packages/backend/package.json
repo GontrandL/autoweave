@@ -15,7 +15,7 @@
     "@autoweave/agents": "file:../agents",
     "@autoweave/memory": "file:../memory",
     "@autoweave/core": "file:../core",
-    "express": "^4.18.2",
+    "express": "^5.1.0",
     "node-fetch": "latest"
   },
   "devDependencies": {

@@ -24,13 +24,13 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "bullmq": "^4.15.1",
+    "bullmq": "^5.56.4",
     "cron-parser": "^5.3.0",
     "eventemitter3": "^5.0.1",
     "ioredis": "^5.3.2",
-    "node-cron": "^3.0.3",
-    "pino": "^8.16.1",
-    "uuid": "^9.0.1"
+    "node-cron": "^4.2.1",
+    "pino": "^9.7.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",

@@ -29,7 +29,7 @@
     "@playwright/test": "^1.40.0",
     "eventemitter3": "^5.0.1",
     "json-rpc-2.0": "^1.6.0",
-    "p-queue": "^7.3.0",
+    "p-queue": "^8.1.0",
     "playwright": "^1.54.1",
     "playwright-core": "^1.40.0",
     "ws": "^8.18.1"
