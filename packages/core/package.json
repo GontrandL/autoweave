@@ -16,7 +16,7 @@
     "@autoweave/shared": "file:../shared",
     "ajv": "latest",
     "async": "^3.2.5",
-    "express": "^4.18.2",
+    "express": "^5.1.0",
     "is-stream": "latest",
     "logform": "^2.6.0",
     "openai": "^4.0.0",
