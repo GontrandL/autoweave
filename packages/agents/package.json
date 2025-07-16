@@ -24,8 +24,8 @@
     "axios": "^1.4.0"
   },
   "devDependencies": {
-    "jest": "^29.5.0",
-    "eslint": "^8.42.0"
+    "jest": "^30.0.4",
+    "eslint": "^9.31.0"
   },
   "exports": {
     ".": {

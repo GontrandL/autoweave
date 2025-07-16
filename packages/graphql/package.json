@@ -29,13 +29,13 @@
     "@graphql-codegen/typescript-react-apollo": "^4.0.0",
     "@graphql-codegen/typescript-resolvers": "^4.0.0",
     "@types/react": "^18.2.0",
-    "eslint": "^8.0.0",
+    "eslint": "^9.31.0",
     "graphql-request": "^6.1.0",
     "prettier": "^3.2.5",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.0",
     "tsup": "^8.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.8.3"
   },
   "peerDependencies": {
     "react": "^18.0.0"
