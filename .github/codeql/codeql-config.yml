@@ -31,18 +31,14 @@ paths-ignore:
 
 packs:
   - codeql/javascript-queries
-  - codeql/typescript-queries
   
 # Custom query suites for AutoWeave
 query-suites:
   - name: autoweave-security
     queries:
       - codeql/javascript-queries:Security
-      - codeql/typescript-queries:Security
       
   - name: autoweave-quality
     queries:
       - codeql/javascript-queries:Correctness
       - codeql/javascript-queries:Maintainability
-      - codeql/typescript-queries:Correctness
-      - codeql/typescript-queries:Maintainability
