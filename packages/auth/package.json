@@ -12,7 +12,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "jose": "^5.0.0",
+    "jose": "^6.0.12",
     "next-auth": "^4.24.0"
   },
   "devDependencies": {
