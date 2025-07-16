@@ -1,0 +1,344 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * *' # Run daily at 2 AM
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '8'
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        project: [
+          'api-tests',
+          'workflow-tests', 
+          'admin-ui',
+          'dev-studio',
+          'user-ui'
+        ]
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: autoweave_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Setup test environment
+        run: |
+          cp .env.example .env
+          echo "NODE_ENV=test" >> .env
+          echo "REDIS_URL=redis://localhost:6379" >> .env
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autoweave_test" >> .env
+
+      - name: Start services
+        run: |
+          pnpm run start:test &
+          sleep 10
+          curl -f http://localhost:3000/api/health || exit 1
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npx playwright test --project=${{ matrix.project }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: e2e-results-${{ matrix.project }}
+          path: |
+            test-results/
+            playwright-report/
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: matrix.project == 'api-tests'
+        with:
+          files: ./coverage/lcov.info
+          flags: e2e
+
+  e2e-mobile:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Setup test environment
+        run: |
+          cp .env.example .env
+          echo "NODE_ENV=test" >> .env
+
+      - name: Start services
+        run: |
+          pnpm run start:test &
+          sleep 10
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run mobile E2E tests
+        run: npx playwright test --project=admin-ui-mobile --project=dev-studio-mobile --project=user-ui-mobile
+
+      - name: Upload mobile test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: e2e-mobile-results
+          path: |
+            test-results/
+            playwright-report/
+
+  e2e-performance:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Setup test environment
+        run: |
+          cp .env.example .env
+          echo "NODE_ENV=production" >> .env
+
+      - name: Start services
+        run: |
+          pnpm run start:prod &
+          sleep 15
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run performance tests
+        run: npx playwright test --grep="performance|Performance"
+
+      - name: Generate performance report
+        run: |
+          mkdir -p performance-reports
+          npx playwright show-report --reporter=json > performance-reports/report.json
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: performance-reports/
+
+  e2e-security:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Setup test environment
+        run: |
+          cp .env.example .env
+          echo "NODE_ENV=test" >> .env
+
+      - name: Start services
+        run: |
+          pnpm run start:test &
+          sleep 10
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run security tests
+        run: npx playwright test --grep="security|Security|auth|Auth"
+
+      - name: Upload security test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-test-results
+          path: |
+            test-results/
+            playwright-report/
+
+  e2e-summary:
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, e2e-mobile, e2e-performance, e2e-security]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate summary report
+        run: |
+          echo "# E2E Test Summary" > summary.md
+          echo "## Test Results" >> summary.md
+          
+          if [ -d "e2e-results-api-tests" ]; then
+            echo "✅ API Tests: Completed" >> summary.md
+          else
+            echo "❌ API Tests: Failed" >> summary.md
+          fi
+          
+          if [ -d "e2e-results-workflow-tests" ]; then
+            echo "✅ Workflow Tests: Completed" >> summary.md
+          else
+            echo "❌ Workflow Tests: Failed" >> summary.md
+          fi
+          
+          if [ -d "e2e-results-admin-ui" ]; then
+            echo "✅ Admin UI Tests: Completed" >> summary.md
+          else
+            echo "❌ Admin UI Tests: Failed" >> summary.md
+          fi
+          
+          if [ -d "e2e-mobile-results" ]; then
+            echo "✅ Mobile Tests: Completed" >> summary.md
+          else
+            echo "⚠️ Mobile Tests: Skipped" >> summary.md
+          fi
+          
+          if [ -d "performance-results" ]; then
+            echo "✅ Performance Tests: Completed" >> summary.md
+          else
+            echo "⚠️ Performance Tests: Skipped" >> summary.md
+          fi
+          
+          if [ -d "security-test-results" ]; then
+            echo "✅ Security Tests: Completed" >> summary.md
+          else
+            echo "⚠️ Security Tests: Skipped" >> summary.md
+          fi
+          
+          echo "## Artifacts" >> summary.md
+          echo "- Test reports available in GitHub Actions artifacts" >> summary.md
+          echo "- Performance metrics tracked over time" >> summary.md
+          echo "- Security test results reviewed" >> summary.md
+
+      - name: Comment PR
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-summary
+          path: summary.md

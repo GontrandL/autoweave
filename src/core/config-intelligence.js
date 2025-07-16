@@ -14,7 +14,7 @@ class ConfigurationIntelligence {
         this.memoryManager = memoryManager;
         this.freshSources = new FreshSourcesService(config.freshSources);
         
-        // Patterns de configuration connus
+        // Patterns de configuration connus - enrichis avec stack open source 2025
         this.configPatterns = {
             'vscode': {
                 docker: ['codercom/code-server'],
@@ -35,6 +35,76 @@ class ConfigurationIntelligence {
                 docker: ['nginx', 'httpd', 'traefik'],
                 helm: ['nginx', 'apache', 'traefik'],
                 keywords: ['proxy', 'ingress', 'load-balancer']
+            },
+            // Nouveaux patterns open source 2025
+            'observability-stack': {
+                docker: ['prom/prometheus', 'grafana/grafana', 'grafana/loki', 'jaegertracing/all-in-one'],
+                helm: ['prometheus', 'grafana', 'loki-stack', 'jaeger'],
+                keywords: ['observability', 'metrics', 'logs', 'tracing', 'monitoring', 'opentelemetry'],
+                license: ['Apache-2.0', 'MIT'],
+                cncf: true
+            },
+            'security-stack': {
+                docker: ['hashicorp/vault', 'aquasecurity/trivy', 'wazuh/wazuh'],
+                helm: ['hashicorp-vault', 'trivy', 'wazuh'],
+                keywords: ['security', 'secrets', 'scanning', 'siem', 'vulnerabilities'],
+                license: ['MPL-2.0', 'Apache-2.0', 'GPL-v2'],
+                cncf: false
+            },
+            'gitops-stack': {
+                docker: ['argoproj/argocd', 'tektoncd/pipeline'],
+                helm: ['argo-cd', 'tekton-pipeline'],
+                keywords: ['gitops', 'ci/cd', 'deployment', 'continuous-delivery'],
+                license: ['Apache-2.0'],
+                cncf: true
+            },
+            'registry-stack': {
+                docker: ['goharbor/harbor-core', 'minio/minio', 'verdaccio/verdaccio'],
+                helm: ['harbor', 'minio', 'verdaccio'],
+                keywords: ['registry', 'storage', 'artifacts', 'images', 'packages'],
+                license: ['Apache-2.0', 'AGPL-v3', 'MIT'],
+                cncf: false
+            },
+            'plugin-system': {
+                docker: ['eclipse/openvsx-server'],
+                npm: ['vm2'],
+                keywords: ['plugins', 'extensions', 'marketplace', 'sandbox'],
+                license: ['EPL-2.0', 'MIT'],
+                cncf: false
+            },
+            'ai-orchestration': {
+                npm: ['langchain', 'crewai'],
+                keywords: ['ai', 'llm', 'agents', 'orchestration', 'automation'],
+                license: ['MIT'],
+                cncf: false
+            },
+            'testing-stack': {
+                docker: ['testcontainers/testcontainers'],
+                npm: ['testcontainers', 'playwright', 'msw'],
+                keywords: ['testing', 'e2e', 'integration', 'sandbox', 'mock'],
+                license: ['MIT', 'Apache-2.0'],
+                cncf: false
+            },
+            'k8s-tooling': {
+                docker: ['rancher/k3s', 'rancher/k3d'],
+                helm: ['rancher'],
+                keywords: ['kubernetes', 'k8s', 'orchestration', 'cluster'],
+                license: ['Apache-2.0'],
+                cncf: true
+            },
+            'backup-stack': {
+                docker: ['vmware-tanzu/velero'],
+                helm: ['velero'],
+                keywords: ['backup', 'restore', 'disaster-recovery', 'kubernetes'],
+                license: ['Apache-2.0'],
+                cncf: true
+            },
+            'no-code-stack': {
+                docker: ['nocodb/nocodb', 'payloadcms/payload'],
+                npm: ['nocodb', 'payload'],
+                keywords: ['no-code', 'cms', 'database', 'ui'],
+                license: ['GPL-v3', 'MIT'],
+                cncf: false
             }
         };
     }
@@ -385,7 +455,7 @@ class ConfigurationIntelligence {
     }
 
     /**
-     * Génère des suggestions de configuration
+     * Génère des suggestions de configuration avec priorité open source
      */
     async generateSuggestions(partialIntent) {
         const suggestions = [];
@@ -404,19 +474,164 @@ class ConfigurationIntelligence {
             });
         }
         
-        // Ajouter des suggestions basées sur les patterns
+        // Ajouter des suggestions basées sur les patterns avec priorité open source
+        const patternSuggestions = this.getOpenSourcePatternSuggestions(partialIntent);
+        suggestions.push(...patternSuggestions);
+        
+        // Trier par priorité open source
+        return this.prioritizeOpenSourceSuggestions(suggestions);
+    }
+
+    /**
+     * Obtient des suggestions de patterns open source
+     */
+    getOpenSourcePatternSuggestions(partialIntent) {
+        const suggestions = [];
+        const intent = partialIntent.toLowerCase();
+        
         for (const [pattern, config] of Object.entries(this.configPatterns)) {
-            if (partialIntent.toLowerCase().includes(pattern.substring(0, 3))) {
+            // Vérifier si le pattern correspond à l'intention
+            const matchesKeywords = config.keywords.some(kw => intent.includes(kw));
+            const matchesName = intent.includes(pattern.substring(0, 3));
+            
+            if (matchesKeywords || matchesName) {
                 suggestions.push({
                     type: 'pattern',
                     name: pattern,
                     description: `Standard ${pattern} configuration`,
-                    components: config.docker || config.helm
+                    components: config.docker || config.helm,
+                    openSource: true,
+                    licenses: config.license || ['Unknown'],
+                    cncf: config.cncf || false,
+                    score: this.calculateOpenSourceScore(config)
                 });
             }
         }
         
         return suggestions;
+    }
+
+    /**
+     * Calcule un score de préférence open source
+     */
+    calculateOpenSourceScore(config) {
+        let score = 0;
+        
+        // Bonus pour les projets CNCF
+        if (config.cncf) score += 30;
+        
+        // Bonus pour les licences permissives
+        if (config.license) {
+            const permissiveLicenses = ['Apache-2.0', 'MIT', 'BSD-3-Clause'];
+            if (config.license.some(l => permissiveLicenses.includes(l))) {
+                score += 20;
+            }
+        }
+        
+        // Bonus pour les stacks modernes (2025)
+        const modernPatterns = ['observability-stack', 'security-stack', 'gitops-stack', 'ai-orchestration'];
+        if (modernPatterns.includes(config.name)) {
+            score += 15;
+        }
+        
+        return score;
+    }
+
+    /**
+     * Priorise les suggestions open source
+     */
+    prioritizeOpenSourceSuggestions(suggestions) {
+        return suggestions.sort((a, b) => {
+            // Priorité 1: Solutions open source
+            if (a.openSource && !b.openSource) return -1;
+            if (!a.openSource && b.openSource) return 1;
+            
+            // Priorité 2: Score open source
+            if (a.score && b.score) {
+                if (a.score !== b.score) return b.score - a.score;
+            }
+            
+            // Priorité 3: Projets CNCF
+            if (a.cncf && !b.cncf) return -1;
+            if (!a.cncf && b.cncf) return 1;
+            
+            return 0;
+        });
+    }
+
+    /**
+     * Génère des alternatives open source pour un outil propriétaire
+     */
+    async generateOpenSourceAlternatives(proprietaryTool) {
+        const alternatives = [];
+        
+        // Mapping des outils propriétaires vers open source
+        const alternativeMap = {
+            'datadog': ['observability-stack'], // Prometheus + Grafana + Loki
+            'new-relic': ['observability-stack'],
+            'splunk': ['observability-stack'],
+            'jenkins-enterprise': ['gitops-stack'], // ArgoCD + Tekton
+            'github-actions': ['gitops-stack'],
+            'terraform-enterprise': ['gitops-stack'], // OpenTofu
+            'vault-enterprise': ['security-stack'], // Vault open source
+            'docker-enterprise': ['registry-stack'], // Harbor
+            'jfrog-artifactory': ['registry-stack'],
+            'airtable': ['no-code-stack'], // NocoDB
+            'retool': ['no-code-stack']
+        };
+        
+        const tool = proprietaryTool.toLowerCase();
+        const patterns = alternativeMap[tool] || [];
+        
+        for (const pattern of patterns) {
+            const config = this.configPatterns[pattern];
+            if (config) {
+                alternatives.push({
+                    pattern,
+                    name: pattern.replace('-', ' '),
+                    description: `Open source alternative to ${proprietaryTool}`,
+                    components: config.docker || config.helm,
+                    licenses: config.license || ['Unknown'],
+                    cncf: config.cncf || false,
+                    estimatedCostSaving: this.estimateCostSaving(proprietaryTool),
+                    migrationComplexity: this.estimateMigrationComplexity(proprietaryTool, pattern)
+                });
+            }
+        }
+        
+        return alternatives;
+    }
+
+    /**
+     * Estime les économies de coûts
+     */
+    estimateCostSaving(proprietaryTool) {
+        const costSavings = {
+            'datadog': { monthly: 500, yearly: 6000 },
+            'new-relic': { monthly: 400, yearly: 4800 },
+            'splunk': { monthly: 1000, yearly: 12000 },
+            'terraform-enterprise': { monthly: 200, yearly: 2400 },
+            'vault-enterprise': { monthly: 300, yearly: 3600 },
+            'docker-enterprise': { monthly: 150, yearly: 1800 },
+            'jfrog-artifactory': { monthly: 250, yearly: 3000 }
+        };
+        
+        return costSavings[proprietaryTool.toLowerCase()] || { monthly: 100, yearly: 1200 };
+    }
+
+    /**
+     * Estime la complexité de migration
+     */
+    estimateMigrationComplexity(proprietaryTool, pattern) {
+        const complexity = {
+            'observability-stack': 'Medium - Requires metrics configuration',
+            'security-stack': 'High - Requires security audit',
+            'gitops-stack': 'Medium - Requires CI/CD reconfiguration',
+            'registry-stack': 'Low - Direct replacement',
+            'no-code-stack': 'Medium - Data migration required'
+        };
+        
+        return complexity[pattern] || 'Medium';
     }
 
     /**

@@ -1,0 +1,19 @@
+query GetPlugins {
+  plugins {
+    id
+    name
+    version
+    status
+    description
+    memoryUsage
+    author
+    category
+  }
+}
+
+mutation TogglePlugin($id: ID!) {
+  togglePlugin(id: $id) {
+    id
+    status
+  }
+}

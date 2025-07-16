@@ -1,0 +1,289 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "grafana-stack.fullname" . }}-alert-rules
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grafana-stack.labels" . | nindent 4 }}
+    {{- include "grafana-stack.tenantLabels" . | nindent 4 }}
+  annotations:
+    {{- include "grafana-stack.annotations" . | nindent 4 }}
+data:
+  autoweave-alerts.yml: |
+    groups:
+      - name: autoweave_performance_alerts
+        interval: 30s
+        rules:
+          # USB Daemon Performance Alerts
+          - alert: HighUSBEventLatency
+            expr: histogram_quantile(0.95, rate(usb_event_processing_duration_ms_bucket[5m])) > 80
+            for: 2m
+            labels:
+              severity: warning
+              component: usb-daemon
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "USB event latency is high"
+              description: "USB event P95 latency is {{ $value }}ms, above the 80ms warning threshold"
+              runbook_url: "https://docs.autoweave.com/runbooks/usb-latency"
+              dashboard_url: "https://grafana.autoweave.com/d/usb-daemon/autoweave-usb-daemon"
+
+          - alert: CriticalUSBEventLatency
+            expr: histogram_quantile(0.95, rate(usb_event_processing_duration_ms_bucket[5m])) > 100
+            for: 1m
+            labels:
+              severity: critical
+              component: usb-daemon
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "USB event latency is critically high"
+              description: "USB event P95 latency is {{ $value }}ms, above the 100ms critical threshold"
+              runbook_url: "https://docs.autoweave.com/runbooks/usb-latency"
+              dashboard_url: "https://grafana.autoweave.com/d/usb-daemon/autoweave-usb-daemon"
+
+          # Plugin Loader Performance Alerts
+          - alert: SlowPluginLoading
+            expr: histogram_quantile(0.95, rate(plugin_load_duration_ms_bucket[5m])) > 200
+            for: 2m
+            labels:
+              severity: warning
+              component: plugin-loader
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "Plugin loading is slow"
+              description: "Plugin load P95 time is {{ $value }}ms, above the 200ms warning threshold"
+              runbook_url: "https://docs.autoweave.com/runbooks/plugin-loading"
+              dashboard_url: "https://grafana.autoweave.com/d/plugin-loader/autoweave-plugin-loader"
+
+          - alert: CriticalPluginLoadTime
+            expr: histogram_quantile(0.95, rate(plugin_load_duration_ms_bucket[5m])) > 250
+            for: 1m
+            labels:
+              severity: critical
+              component: plugin-loader
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "Plugin loading is critically slow"
+              description: "Plugin load P95 time is {{ $value }}ms, above the 250ms critical threshold"
+              runbook_url: "https://docs.autoweave.com/runbooks/plugin-loading"
+              dashboard_url: "https://grafana.autoweave.com/d/plugin-loader/autoweave-plugin-loader"
+
+          # Memory and Resource Alerts
+          - alert: MemoryLeakDetected
+            expr: increase(nodejs_heap_size_used_bytes[1h]) / 1024 / 1024 > 100
+            for: 5m
+            labels:
+              severity: critical
+              component: memory
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "Potential memory leak detected"
+              description: "Memory usage increased by {{ $value }}MB in the last hour"
+              runbook_url: "https://docs.autoweave.com/runbooks/memory-leak"
+              dashboard_url: "https://grafana.autoweave.com/d/overview/autoweave-overview"
+
+          - alert: HighMemoryUsage
+            expr: nodejs_heap_size_used_bytes / nodejs_heap_size_total_bytes > 0.9
+            for: 5m
+            labels:
+              severity: warning
+              component: memory
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "High memory usage detected"
+              description: "Heap usage is {{ $value | humanizePercentage }} of total heap"
+              runbook_url: "https://docs.autoweave.com/runbooks/high-memory"
+              dashboard_url: "https://grafana.autoweave.com/d/overview/autoweave-overview"
+
+          # Availability Alerts
+          - alert: ComponentDown
+            expr: up{job=~"autoweave.*"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              component: availability
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "AutoWeave component is down"
+              description: "{{ $labels.instance }} ({{ $labels.job }}) has been down for more than 1 minute"
+              runbook_url: "https://docs.autoweave.com/runbooks/component-down"
+              dashboard_url: "https://grafana.autoweave.com/d/overview/autoweave-overview"
+
+          - alert: HighErrorRate
+            expr: rate(errors_total[5m]) > 0.1
+            for: 2m
+            labels:
+              severity: warning
+              component: general
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "High error rate detected"
+              description: "Error rate is {{ $value }} errors per second for {{ $labels.component }}"
+              runbook_url: "https://docs.autoweave.com/runbooks/high-errors"
+              dashboard_url: "https://grafana.autoweave.com/d/overview/autoweave-overview"
+
+      - name: autoweave_slo_alerts
+        interval: 60s
+        rules:
+          # SLO Violation Alerts
+          - alert: USBEventLatencySLOViolation
+            expr: histogram_quantile(0.95, rate(usb_event_processing_duration_ms_bucket[5m])) > 80
+            for: 5m
+            labels:
+              severity: warning
+              component: usb-daemon
+              slo_type: latency
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "USB event latency SLO violation"
+              description: "95% of USB events should be processed within 80ms, current P95 is {{ $value }}ms"
+              runbook_url: "https://docs.autoweave.com/runbooks/slo-violation"
+              dashboard_url: "https://grafana.autoweave.com/d/slo/autoweave-slo"
+
+          - alert: AvailabilitySLOViolation
+            expr: avg_over_time(up{job=~"autoweave.*"}[5m]) < 0.999
+            for: 5m
+            labels:
+              severity: critical
+              component: availability
+              slo_type: availability
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "System availability SLO violation"
+              description: "System availability is {{ $value | humanizePercentage }}, below 99.9% SLO"
+              runbook_url: "https://docs.autoweave.com/runbooks/slo-violation"
+              dashboard_url: "https://grafana.autoweave.com/d/slo/autoweave-slo"
+
+          - alert: ErrorRateSLOViolation
+            expr: rate(errors_total[5m]) / rate(http_requests_total[5m]) > 0.01
+            for: 5m
+            labels:
+              severity: warning
+              component: general
+              slo_type: error_rate
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "Error rate SLO violation"
+              description: "Error rate is {{ $value | humanizePercentage }}, above 1% SLO"
+              runbook_url: "https://docs.autoweave.com/runbooks/slo-violation"
+              dashboard_url: "https://grafana.autoweave.com/d/slo/autoweave-slo"
+
+      - name: autoweave_business_alerts
+        interval: 300s
+        rules:
+          # Business Metrics Alerts
+          - alert: LowTenantActivity
+            expr: rate(tenant_operations_total[1h]) < 0.01
+            for: 30m
+            labels:
+              severity: info
+              component: business
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "Low tenant activity detected"
+              description: "Tenant {{ $labels.tenant_id }} has less than 0.01 operations per second over the last hour"
+              runbook_url: "https://docs.autoweave.com/runbooks/low-activity"
+              dashboard_url: "https://grafana.autoweave.com/d/business/autoweave-business-metrics"
+
+          - alert: HighPluginFailureRate
+            expr: rate(plugin_executions_total{success="false"}[5m]) / rate(plugin_executions_total[5m]) > 0.1
+            for: 10m
+            labels:
+              severity: warning
+              component: plugin-loader
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "High plugin failure rate"
+              description: "Plugin {{ $labels.plugin_name }} has {{ $value | humanizePercentage }} failure rate"
+              runbook_url: "https://docs.autoweave.com/runbooks/plugin-failures"
+              dashboard_url: "https://grafana.autoweave.com/d/business/autoweave-business-metrics"
+
+          - alert: AutomationTaskBacklog
+            expr: sum(queue_size{queue_name=~"automation.*"}) > 100
+            for: 15m
+            labels:
+              severity: warning
+              component: queue-manager
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "Automation task backlog detected"
+              description: "There are {{ $value }} automation tasks queued, indicating potential bottleneck"
+              runbook_url: "https://docs.autoweave.com/runbooks/task-backlog"
+              dashboard_url: "https://grafana.autoweave.com/d/business/autoweave-business-metrics"
+
+      - name: autoweave_capacity_alerts
+        interval: 60s
+        rules:
+          # Capacity Planning Alerts
+          - alert: EventRateIncreasing
+            expr: rate(usb_events_total[10m]) > rate(usb_events_total[1h])
+            for: 10m
+            labels:
+              severity: info
+              component: capacity
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "USB event rate is increasing"
+              description: "Event processing rate has increased, monitor for capacity needs"
+              runbook_url: "https://docs.autoweave.com/runbooks/capacity-planning"
+              dashboard_url: "https://grafana.autoweave.com/d/capacity/autoweave-capacity"
+
+          - alert: PluginLoadRateHigh
+            expr: rate(plugin_loads_total[5m]) > 1
+            for: 5m
+            labels:
+              severity: info
+              component: capacity
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "High plugin load rate"
+              description: "Plugins are being loaded at {{ $value }} per second"
+              runbook_url: "https://docs.autoweave.com/runbooks/capacity-planning"
+              dashboard_url: "https://grafana.autoweave.com/d/capacity/autoweave-capacity"
+
+          - alert: CacheEvictionHigh
+            expr: rate(cache_evictions_total[5m]) > 0.1
+            for: 5m
+            labels:
+              severity: warning
+              component: cache
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "High cache eviction rate"
+              description: "Cache evictions are happening at {{ $value }} per second, consider increasing cache size"
+              runbook_url: "https://docs.autoweave.com/runbooks/cache-performance"
+              dashboard_url: "https://grafana.autoweave.com/d/cache/autoweave-cache"
+
+          # Tenant-specific alerts
+          - alert: TenantResourceExhaustion
+            expr: rate(tenant_operations_total[5m]) > 10
+            for: 10m
+            labels:
+              severity: warning
+              component: tenant-isolation
+              tenant_id: {{ .Values.global.tenantId }}
+              environment: {{ .Values.global.environment }}
+            annotations:
+              summary: "Tenant resource usage is high"
+              description: "Tenant {{ $labels.tenant_id }} is performing {{ $value }} operations per second"
+              runbook_url: "https://docs.autoweave.com/runbooks/tenant-limits"
+              dashboard_url: "https://grafana.autoweave.com/d/tenant/autoweave-tenant"
+{{- end }}

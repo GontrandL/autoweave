@@ -1,25 +1,47 @@
-{{- if .Values.core.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "autoweave.fullname" . }}-core
+  name: {{ include "autoweave.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "autoweave.labels" . | nindent 4 }}
-    app.kubernetes.io/component: core
+  annotations:
+    deployment.kubernetes.io/revision: "{{ .Release.Revision }}"
+    autoweave.io/version: {{ .Chart.AppVersion | quote }}
+    autoweave.io/build-date: {{ now | date "2006-01-02T15:04:05Z" }}
 spec:
-  replicas: {{ .Values.core.replicaCount }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.autoweave.replicaCount | default 3 }}
+  {{- end }}
+  strategy:
+    {{- if .Values.autoweave.strategy }}
+    {{- toYaml .Values.autoweave.strategy | nindent 4 }}
+    {{- else }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+    {{- end }}
   selector:
     matchLabels:
       {{- include "autoweave.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: core
   template:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+        {{- if .Values.serviceMesh.istio.enabled }}
+        sidecar.istio.io/inject: "true"
+        {{- end }}
+        {{- with .Values.global.podSecurityContext }}
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+        {{- end }}
       labels:
         {{- include "autoweave.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: core
+        version: {{ .Chart.AppVersion | quote }}
     spec:
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -27,72 +49,274 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "autoweave.serviceAccountName" . }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- if .Values.global.podSecurityContext }}
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+        {{- else }}
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        {{- end }}
+      
+      # Init containers for dependency checking
+      initContainers:
+      {{- if .Values.redis.enabled }}
+      - name: wait-for-redis
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          until nc -z {{ .Release.Name }}-redis-master 6379; do
+            echo "Waiting for Redis...";
+            sleep 2;
+          done;
+          echo "Redis is ready!"
+        securityContext:
+          {{- if .Values.global.securityContext }}
+          {{- toYaml .Values.global.securityContext | nindent 10 }}
+          {{- else }}
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          {{- end }}
+      {{- end }}
+      
+      {{- if .Values.postgresql.enabled }}
+      - name: wait-for-postgres
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          until nc -z {{ .Release.Name }}-postgresql 5432; do
+            echo "Waiting for PostgreSQL...";
+            sleep 2;
+          done;
+          echo "PostgreSQL is ready!"
+        securityContext:
+          {{- if .Values.global.securityContext }}
+          {{- toYaml .Values.global.securityContext | nindent 10 }}
+          {{- else }}
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          {{- end }}
+      {{- end }}
+      
       containers:
-        - name: core
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.core.image.repository }}:{{ .Values.core.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.core.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: 3000
-              protocol: TCP
-            - name: websocket
-              containerPort: 3000
-              protocol: TCP
-          env:
-            - name: NODE_ENV
-              value: {{ .Values.core.env.NODE_ENV | quote }}
-            - name: LOG_LEVEL
-              value: {{ .Values.core.env.LOG_LEVEL | quote }}
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "autoweave.fullname" . }}-secret
-                  key: openai-api-key
-            - name: REDIS_URL
-              value: "redis://{{ .Release.Name }}-redis-master:6379"
-            - name: QDRANT_URL
-              value: "http://{{ include "autoweave.fullname" . }}-qdrant:6333"
-            - name: MEMGRAPH_URL
-              value: "bolt://{{ include "autoweave.fullname" . }}-memgraph:7687"
-            - name: ANP_PORT
-              value: {{ .Values.integrations.anp.port | quote }}
-            - name: MCP_PORT
-              value: {{ .Values.integrations.mcp.port | quote }}
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          resources:
-            {{- toYaml .Values.core.resources | nindent 12 }}
-          volumeMounts:
-            - name: config
-              mountPath: /app/config
-              readOnly: true
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- if .Values.global.securityContext }}
+          {{- toYaml .Values.global.securityContext | nindent 10 }}
+          {{- else }}
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          {{- end }}
+        image: "{{ .Values.global.imageRegistry | default "ghcr.io" }}/{{ .Values.autoweave.image.repository | default "autoweave/autoweave" }}:{{ .Values.autoweave.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.autoweave.image.pullPolicy | default "IfNotPresent" }}
+        
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        - name: metrics
+          containerPort: 3000
+          protocol: TCP
+        
+        # Health checks
+        livenessProbe:
+          {{- if .Values.autoweave.livenessProbe }}
+          {{- toYaml .Values.autoweave.livenessProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          {{- end }}
+        
+        readinessProbe:
+          {{- if .Values.autoweave.readinessProbe }}
+          {{- toYaml .Values.autoweave.readinessProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+          {{- end }}
+        
+        startupProbe:
+          {{- if .Values.autoweave.startupProbe }}
+          {{- toYaml .Values.autoweave.startupProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30
+          {{- end }}
+        
+        # Resource management
+        resources:
+          {{- if .Values.autoweave.resources }}
+          {{- toYaml .Values.autoweave.resources | nindent 10 }}
+          {{- else }}
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          {{- end }}
+        
+        # Environment variables
+        env:
+        {{- if .Values.autoweave.env }}
+        {{- range $key, $value := .Values.autoweave.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- else }}
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: PORT
+          value: "3000"
+        - name: HOST
+          value: "0.0.0.0"
+        {{- end }}
+        
+        # Kubernetes metadata injection
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        
+        # Secret references
+        {{- if .Values.autoweave.secrets.create }}
+        envFrom:
+        - secretRef:
+            name: {{ include "autoweave.fullname" . }}-secrets
+        {{- end }}
+        
+        # Redis configuration
+        {{- if .Values.redis.enabled }}
+        - name: REDIS_URL
+          value: "redis://{{ .Release.Name }}-redis-master:6379"
+        {{- if .Values.redis.auth.enabled }}
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretRef:
+              name: {{ .Values.redis.auth.existingSecret | default (printf "%s-redis" .Release.Name) }}
+              key: {{ .Values.redis.auth.existingSecretPasswordKey | default "redis-password" }}
+        {{- end }}
+        {{- end }}
+        
+        # PostgreSQL configuration
+        {{- if .Values.postgresql.enabled }}
+        - name: DATABASE_URL
+          value: "postgresql://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretRef:
+              name: {{ .Values.postgresql.auth.existingSecret | default (printf "%s-postgresql" .Release.Name) }}
+              key: {{ .Values.postgresql.auth.secretKeys.userPasswordKey | default "password" }}
+        {{- end }}
+        
+        # Volume mounts for temporary files
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: var-tmp
+          mountPath: /var/tmp
+        - name: app-tmp
+          mountPath: /app/tmp
+        
+        {{- if .Values.autoweave.extraVolumeMounts }}
+        {{- toYaml .Values.autoweave.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      
+      # Volumes
       volumes:
-        - name: config
-          configMap:
-            name: {{ include "autoweave.fullname" . }}-config
+      - name: tmp
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: var-tmp
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: app-tmp
+        emptyDir:
+          sizeLimit: 1Gi
+      
+      {{- if .Values.autoweave.extraVolumes }}
+      {{- toYaml .Values.autoweave.extraVolumes | nindent 6 }}
+      {{- end }}
+      
+      # Node scheduling
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-{{- end }}
+      
+      # DNS policy for better networking
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+        - name: edns0
+      
+      # Termination grace period
+      terminationGracePeriodSeconds: 30
+      
+      # Priority class for critical workloads
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}

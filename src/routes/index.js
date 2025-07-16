@@ -14,6 +14,7 @@ const configRoutes = require('./config');
 const selfAwarenessRoutes = require('./self-awareness');
 const searchRoutes = require('./search');
 const codingMemoryRoutes = require('./coding-memory');
+const openSourceRoutes = require('./open-source');
 
 /**
  * Routes Index - Central routing configuration for AutoWeave API
@@ -30,7 +31,8 @@ class RoutesIndex {
             config: configRoutes,
             selfAwareness: selfAwarenessRoutes,
             search: searchRoutes,
-            codingMemory: codingMemoryRoutes
+            codingMemory: codingMemoryRoutes,
+            openSource: openSourceRoutes
         };
         
         this.services = {
@@ -120,6 +122,7 @@ class RoutesIndex {
         app.use('/api/v1/self-awareness', this.routes.selfAwareness);
         app.use('/api/v1/search', this.routes.search);
         app.use('/api/v1/memory/code', this.routes.codingMemory);
+        app.use('/api/v1/open-source', this.routes.openSource);
         
         // Backward compatibility routes (without versioning)
         app.use('/api/memory', this.routes.memory);
@@ -134,6 +137,7 @@ class RoutesIndex {
         app.use('/api/self-awareness', this.routes.selfAwareness);
         app.use('/api/search', this.routes.search);
         app.use('/api/memory/code', this.routes.codingMemory);
+        app.use('/api/open-source', this.routes.openSource);
         
         logger.debug('Routes mounted to Express app');
     }
@@ -157,7 +161,8 @@ class RoutesIndex {
                     health: '/api/health',
                     selfAwareness: '/api/self-awareness',
                     search: '/api/search',
-                    codingMemory: '/api/memory/code'
+                    codingMemory: '/api/memory/code',
+                    openSource: '/api/open-source'
                 },
                 documentation: {
                     agents: 'CRUD operations for AI agents',
@@ -167,14 +172,18 @@ class RoutesIndex {
                     health: 'System health and monitoring',
                     selfAwareness: 'System consciousness and synchronization',
                     search: 'Web, code, and documentation search capabilities',
-                    codingMemory: 'Intelligent code memory with context and relations'
+                    codingMemory: 'Intelligent code memory with context and relations',
+                    openSource: 'Open source discovery and license compliance'
                 },
                 features: [
                     'Natural language agent creation',
                     'Kubernetes native deployment',
                     'Hybrid memory system',
                     'SillyTavern integration',
-                    'Real-time monitoring'
+                    'Real-time monitoring',
+                    'Open source discovery and compliance',
+                    'Automated license auditing',
+                    'Cost-benefit analysis for open source adoption'
                 ]
             });
         });

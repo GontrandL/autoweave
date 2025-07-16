@@ -8,6 +8,17 @@ packages:
   - 'packages/cli'
   - 'packages/integrations'
   - 'packages/deployment'
+  - 'packages/job-queue'
+  
+  # Infrastructure packages
+  - 'packages/usb-daemon'
+  - 'packages/plugin-loader'
+  - 'packages/observability'
+  - 'packages/queue'
+  - 'packages/auto-debugger'
+  - 'packages/graphql'
+  - 'packages/graphql-gateway'
+  - 'packages/auth'
   
   # Shared packages
   - 'packages/shared/*'

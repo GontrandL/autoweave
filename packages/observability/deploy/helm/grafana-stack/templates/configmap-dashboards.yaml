@@ -1,0 +1,386 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "grafana-stack.fullname" . }}-dashboards-overview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grafana-stack.labels" . | nindent 4 }}
+    {{- include "grafana-stack.tenantLabels" . | nindent 4 }}
+    grafana_dashboard: "1"
+  annotations:
+    {{- include "grafana-stack.annotations" . | nindent 4 }}
+data:
+  autoweave-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AutoWeave - System Overview",
+        "tags": ["autoweave", "overview"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "System Health",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up{job=\"autoweave\"}",
+                "legendFormat": "{{instance}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "USB Events Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(usb_events_total[5m])",
+                "legendFormat": "{{action}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Events/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Plugin Load Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(plugin_load_duration_ms_bucket[5m]))",
+                "legendFormat": "P95"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(plugin_load_duration_ms_bucket[5m]))",
+                "legendFormat": "P50"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Milliseconds",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(errors_total[5m])",
+                "legendFormat": "{{component}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Errors/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nodejs_heap_size_used_bytes",
+                "legendFormat": "Heap Used"
+              },
+              {
+                "expr": "nodejs_heap_size_total_bytes",
+                "legendFormat": "Heap Total"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Bytes",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Queue Size",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "queue_size",
+                "legendFormat": "{{queue_name}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Jobs",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "grafana-stack.fullname" . }}-dashboards-usb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grafana-stack.labels" . | nindent 4 }}
+    {{- include "grafana-stack.tenantLabels" . | nindent 4 }}
+    grafana_dashboard: "1"
+  annotations:
+    {{- include "grafana-stack.annotations" . | nindent 4 }}
+data:
+  autoweave-usb-daemon.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AutoWeave - USB Daemon",
+        "tags": ["autoweave", "usb", "daemon"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "USB Event Processing Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(usb_events_total[5m])",
+                "legendFormat": "{{action}} - {{vendor_id}}:{{product_id}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Events/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "USB Event Latency",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(usb_event_processing_duration_ms_bucket[5m]))",
+                "legendFormat": "P95"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(usb_event_processing_duration_ms_bucket[5m]))",
+                "legendFormat": "P50"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Milliseconds",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 3,
+            "title": "Connected Devices",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "usb_devices_connected",
+                "legendFormat": "Connected"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Device Types",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "sum by (vendor_id, product_id) (usb_devices_connected)",
+                "legendFormat": "{{vendor_id}}:{{product_id}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 5,
+            "title": "Event Processing Errors",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(errors_total{component=\"usb-daemon\"}[5m])",
+                "legendFormat": "{{error_type}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Errors/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "grafana-stack.fullname" . }}-dashboards-business
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "grafana-stack.labels" . | nindent 4 }}
+    {{- include "grafana-stack.tenantLabels" . | nindent 4 }}
+    grafana_dashboard: "1"
+  annotations:
+    {{- include "grafana-stack.annotations" . | nindent 4 }}
+data:
+  autoweave-business-metrics.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AutoWeave - Business Metrics",
+        "tags": ["autoweave", "business", "metrics"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Operations by Tenant",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(business_operations_total[5m])",
+                "legendFormat": "{{tenant_id}} - {{operation}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Operations/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Plugin Executions",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(plugin_executions_total[5m])",
+                "legendFormat": "{{plugin_name}} - {{tenant_id}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Executions/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 3,
+            "title": "Automation Tasks",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(automation_tasks_total[5m])",
+                "legendFormat": "{{task_type}} - {{tenant_id}}"
+              }
+            ],
+            "yAxes": [
+              {
+                "label": "Tasks/sec",
+                "min": 0
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Tenant Activity",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "sum by (tenant_id) (rate(tenant_operations_total[5m]))",
+                "legendFormat": "{{tenant_id}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 5,
+            "title": "SLO Compliance",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "1 - (rate(slo_violations_total[5m]) / rate(business_operations_total[5m]))",
+                "legendFormat": "{{component}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 0.95},
+                    {"color": "green", "value": 0.99}
+                  ]
+                },
+                "unit": "percentunit"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "refresh": "5m"
+      }
+    }
+{{- end }}

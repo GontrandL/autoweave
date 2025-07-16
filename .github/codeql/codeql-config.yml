@@ -1,0 +1,48 @@
+name: "AutoWeave Security and Quality"
+disable-default-queries: false
+
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+  - uses: security-experimental
+
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+  - exclude:
+      id: js/dead-store
+
+paths:
+  - packages/
+  - apps/
+  
+paths-ignore:
+  - node_modules
+  - dist
+  - build
+  - coverage
+  - '**/*.test.ts'
+  - '**/*.spec.ts'
+  - '**/*.test.js'
+  - '**/*.spec.js'
+  - archive/
+  - indexed_files_backup/
+  - scripts/test-data/
+
+packs:
+  - codeql/javascript-queries
+  - codeql/typescript-queries
+  
+# Custom query suites for AutoWeave
+query-suites:
+  - name: autoweave-security
+    queries:
+      - codeql/javascript-queries:Security
+      - codeql/typescript-queries:Security
+      
+  - name: autoweave-quality
+    queries:
+      - codeql/javascript-queries:Correctness
+      - codeql/javascript-queries:Maintainability
+      - codeql/typescript-queries:Correctness
+      - codeql/typescript-queries:Maintainability

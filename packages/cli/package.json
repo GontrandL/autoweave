@@ -1,22 +1,45 @@
 {
   "name": "@autoweave/cli",
   "version": "1.0.0",
-  "type": "module",
+  "description": "AutoWeave CLI - Self-Weaving Agent Orchestrator command line interface",
+  "type": "commonjs",
   "main": "./src/index.js",
+  "bin": {
+    "autoweave": "./src/index.js"
+  },
   "scripts": {
     "test": "jest",
     "build": "echo \"No build step\"",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "start": "node src/index.js"
   },
   "dependencies": {
-    "@autoweave/core": "file:../core",
+    "@autoweave/core": "workspace:*",
     "commander": "^11.0.0",
     "inquirer": "^9.2.0",
-    "chalk": "^5.2.0",
-    "yaml": "^2.3.1"
+    "chalk": "^4.1.2",
+    "yaml": "^2.3.1",
+    "axios": "^1.6.0",
+    "ora": "^5.4.1",
+    "cli-table3": "^0.6.3"
   },
   "devDependencies": {
     "jest": "^29.5.0",
-    "eslint": "^8.42.0"
-  }
+    "eslint": "^8.42.0",
+    "@types/node": "^18.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "autoweave",
+    "cli",
+    "agent",
+    "kubernetes",
+    "open-source",
+    "license-compliance",
+    "cost-analysis"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT"
 }

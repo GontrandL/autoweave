@@ -1,0 +1,204 @@
+name: SonarCloud Quality Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for better relevancy of analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linter
+        run: pnpm run lint
+        continue-on-error: true
+
+      - name: Run type checking
+        run: pnpm run type-check
+        continue-on-error: true
+
+      - name: Run tests with coverage
+        run: pnpm run test:coverage
+        env:
+          CI: true
+
+      - name: Fix coverage paths
+        run: |
+          # Fix coverage paths for SonarCloud
+          sed -i 's|SF:/home/runner/work/AutoWeave/AutoWeave/|SF:|g' coverage/lcov.info
+          find packages -name "lcov.info" -exec sed -i 's|SF:/home/runner/work/AutoWeave/AutoWeave/|SF:|g' {} \;
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.branch.name=${{ github.head_ref || github.ref_name }}
+            -Dsonar.pullrequest.key=${{ github.event.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -Dsonar.scm.revision=${{ github.sha }}
+            -Dsonar.buildString=${{ github.run_number }}
+
+      - name: Quality Gate Status
+        uses: sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  security-analysis:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    needs: sonarcloud
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/javascript
+            p/typescript
+            p/docker
+            p/kubernetes
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+          command: test
+
+  performance-analysis:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Bundle Size Analysis
+        run: |
+          # Install bundle analyzer
+          npm install -g bundle-analyzer
+          
+          # Analyze bundle sizes
+          echo "## Bundle Size Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          for package in packages/*/dist; do
+            if [ -d "$package" ]; then
+              package_name=$(basename $(dirname $package))
+              size=$(du -sh $package | cut -f1)
+              echo "- **$package_name**: $size" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Memory Usage Analysis
+        run: |
+          # Run memory usage tests
+          pnpm run test:performance
+          
+          echo "## Memory Usage Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Performance tests completed. Check logs for memory usage details." >> $GITHUB_STEP_SUMMARY
+
+  quality-report:
+    name: Quality Report
+    runs-on: ubuntu-latest
+    needs: [sonarcloud, security-analysis]
+    if: always()
+    
+    steps:
+      - name: Create Quality Report
+        run: |
+          echo "## Code Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **SonarCloud**: ${{ needs.sonarcloud.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Analysis**: ${{ needs.security-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review SonarCloud results for code quality issues" >> $GITHUB_STEP_SUMMARY
+          echo "2. Address any security vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          echo "3. Ensure all quality gates are passing" >> $GITHUB_STEP_SUMMARY
+          echo "4. Update documentation if needed" >> $GITHUB_STEP_SUMMARY

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const inquirer = require('inquirer');
-const chalk = require('chalk');
 const { AutoWeave } = require('@autoweave/core');
 const { KagentBridge } = require('@autoweave/core');
 const config = require('@autoweave/core');
+const chalk = require('chalk');
+const { program } = require('commander');
+const inquirer = require('inquirer');
 
 program
     .name('autoweave')

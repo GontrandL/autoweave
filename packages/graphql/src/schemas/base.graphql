@@ -1,0 +1,101 @@
+# Base GraphQL Schema for AutoWeave
+# This minimal schema is used for code generation when the GraphQL server is not running
+
+scalar DateTime
+scalar JSON
+scalar Upload
+
+type Query {
+  """
+  Health check query
+  """
+  health: HealthStatus!
+  
+  """
+  Get list of plugins
+  """
+  plugins: [Plugin!]!
+  
+  """
+  Get system health metrics
+  """
+  systemHealth: SystemHealth!
+}
+
+type Mutation {
+  """
+  Toggle plugin status
+  """
+  togglePlugin(id: ID!): Plugin!
+  
+  """
+  Placeholder mutation
+  """
+  ping: String!
+}
+
+type HealthStatus {
+  status: String!
+  timestamp: DateTime!
+}
+
+type Plugin {
+  id: ID!
+  name: String!
+  version: String!
+  status: PluginStatus!
+  description: String!
+  memoryUsage: Float!
+  author: String!
+  category: String!
+  enabled: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum PluginStatus {
+  running
+  stopped
+  error
+}
+
+type SystemHealth {
+  cpu: Float!
+  memory: Float!
+  disk: Float!
+  usbDevices: Int!
+  activePlugins: Int!
+  queueJobs: Int!
+  timestamp: DateTime!
+}
+
+# Models referenced in codegen.yml
+type Agent {
+  id: ID!
+  name: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Memory {
+  id: ID!
+  content: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Queue {
+  id: ID!
+  name: String!
+  status: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}

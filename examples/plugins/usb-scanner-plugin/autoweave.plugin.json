@@ -1,0 +1,38 @@
+{
+  "name": "usb-scanner-plugin",
+  "version": "1.0.0",
+  "description": "Plugin pour détecter et configurer les scanners USB",
+  "author": {
+    "name": "AutoWeave Team",
+    "email": "dev@autoweave.dev"
+  },
+  "entry": "src/index.js",
+  "permissions": {
+    "usb": {
+      "vendor_ids": ["0x04A9", "0x03F0"],
+      "product_ids": ["0x220E", "0x0C17"]
+    },
+    "filesystem": [
+      {
+        "path": "/tmp/scans",
+        "mode": "readwrite"
+      }
+    ],
+    "queue": ["scan-processing"],
+    "memory": {
+      "max_heap_mb": 256,
+      "max_workers": 2
+    }
+  },
+  "hooks": {
+    "onLoad": "initialize",
+    "onUnload": "cleanup",
+    "onUSBAttach": "handleScannerAttach",
+    "onUSBDetach": "handleScannerDetach",
+    "onJobReceived": "processScanJob"
+  },
+  "dependencies": {
+    "autoweave": "^1.0.0",
+    "node": ">=18.0.0"
+  }
+}

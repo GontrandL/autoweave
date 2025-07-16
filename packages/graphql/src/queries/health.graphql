@@ -1,0 +1,18 @@
+query GetHealthMetrics {
+  systemHealth {
+    cpu
+    memory
+    disk
+    usbDevices
+    activePlugins
+    queueJobs
+    timestamp
+  }
+}
+
+query GetHealthStatus {
+  health {
+    status
+    timestamp
+  }
+}

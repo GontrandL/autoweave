@@ -1,7 +1,6 @@
-const express = require('express');
-const { Logger } = require('@autoweave/shared');
-const { Validator } = require('@autoweave/shared');
-const { IntegrationAgentModule } = require('@autoweave/agents');
+import express from 'express';
+import { Logger, Validator } from '@autoweave/shared';
+import { IntegrationAgentModule } from '@autoweave/agents';
 
 const router = express.Router();
 const logger = new Logger('AgentRoutes');
@@ -529,4 +528,4 @@ router.get('/integration/metrics/prometheus', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

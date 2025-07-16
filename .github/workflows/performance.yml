@@ -1,0 +1,373 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 4 * * *'  # Daily at 4 AM
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of performance test to run'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+          - spike
+          - all
+
+permissions:
+  contents: read
+  actions: write
+  checks: write
+
+env:
+  NODE_VERSION: '20'
+  PERFORMANCE_THRESHOLD_P95: 500
+  ERROR_RATE_THRESHOLD: 0.02
+
+jobs:
+  performance-test:
+    name: Performance Regression Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: autoweave_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
+    
+    - name: Install dependencies
+      run: |
+        npm install -g pnpm
+        pnpm install --frozen-lockfile
+    
+    - name: Build application
+      run: pnpm build
+    
+    - name: Start test services
+      run: |
+        # Start AutoWeave in test mode
+        pnpm dev &
+        APP_PID=$!
+        echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+        
+        # Wait for application to be ready
+        timeout 60 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+    
+    - name: Run performance baseline tests
+      run: |
+        pnpm test:performance
+      env:
+        NODE_OPTIONS: '--expose-gc'
+        CI: true
+    
+    - name: Upload performance test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-test-results
+        path: |
+          coverage/
+          test-results/
+          performance-*.json
+    
+    - name: Performance regression check
+      run: |
+        node scripts/check-performance-regression.js
+      if: github.event_name == 'pull_request'
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        if [ ! -z "$APP_PID" ]; then
+          kill $APP_PID || true
+        fi
+
+  load-test:
+    name: Load Testing with K6
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event.inputs.test_type == 'load' || github.event.inputs.test_type == 'all'
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: autoweave_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
+    
+    - name: Install K6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Install dependencies
+      run: |
+        npm install -g pnpm
+        pnpm install --frozen-lockfile
+    
+    - name: Build application
+      run: pnpm build
+    
+    - name: Start application for load testing
+      run: |
+        pnpm start &
+        APP_PID=$!
+        echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+        
+        # Wait for application to be ready
+        timeout 120 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+        
+        # Create test agent for load testing
+        curl -X POST http://localhost:3000/api/agents \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer test-token" \
+          -d '{"name":"test-agent-1","config":{"type":"test"}}'
+    
+    - name: Run K6 load tests
+      run: |
+        TEST_TYPE="${{ github.event.inputs.test_type || 'load' }}"
+        
+        if [ "$TEST_TYPE" = "all" ]; then
+          # Run all test scenarios
+          for scenario in smoke load stress spike; do
+            echo "Running $scenario test..."
+            k6 run --env BASE_URL=http://localhost:3000 \
+                   --env AUTH_TOKEN=test-token \
+                   --tag testid=autoweave-$scenario \
+                   tests/load/autoweave-load-test.js \
+                   --out json=k6-results-$scenario.json || true
+          done
+        else
+          k6 run --env BASE_URL=http://localhost:3000 \
+                 --env AUTH_TOKEN=test-token \
+                 --tag testid=autoweave-$TEST_TYPE \
+                 tests/load/autoweave-load-test.js \
+                 --out json=k6-results-$TEST_TYPE.json
+        fi
+    
+    - name: Process K6 results
+      run: |
+        for result_file in k6-results-*.json; do
+          if [ -f "$result_file" ]; then
+            echo "Processing $result_file..."
+            
+            # Extract key metrics
+            cat "$result_file" | jq '.metrics | {
+              http_req_duration: .http_req_duration.values,
+              http_req_failed: .http_req_failed.rate,
+              http_reqs: .http_reqs.count,
+              error_rate: .error_rate.rate
+            }' > "${result_file%.json}-summary.json"
+            
+            # Check thresholds
+            P95=$(cat "$result_file" | jq -r '.metrics.http_req_duration.values.p95 // 0')
+            ERROR_RATE=$(cat "$result_file" | jq -r '.metrics.http_req_failed.rate // 0')
+            
+            echo "P95 Latency: ${P95}ms (threshold: ${PERFORMANCE_THRESHOLD_P95}ms)"
+            echo "Error Rate: ${ERROR_RATE} (threshold: ${ERROR_RATE_THRESHOLD})"
+            
+            # Fail if thresholds exceeded
+            if (( $(echo "$P95 > $PERFORMANCE_THRESHOLD_P95" | bc -l) )); then
+              echo "❌ Performance threshold exceeded: P95 latency $P95ms > ${PERFORMANCE_THRESHOLD_P95}ms"
+              exit 1
+            fi
+            
+            if (( $(echo "$ERROR_RATE > $ERROR_RATE_THRESHOLD" | bc -l) )); then
+              echo "❌ Error rate threshold exceeded: $ERROR_RATE > $ERROR_RATE_THRESHOLD"
+              exit 1
+            fi
+            
+            echo "✅ All thresholds passed for $result_file"
+          fi
+        done
+    
+    - name: Upload K6 results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: k6-load-test-results
+        path: |
+          k6-results-*.json
+          *-summary.json
+          load-test-*.html
+          load-test-*.txt
+    
+    - name: Generate performance report
+      if: always()
+      run: |
+        echo "# Performance Test Results" > performance-report.md
+        echo "" >> performance-report.md
+        echo "## Summary" >> performance-report.md
+        
+        for result_file in k6-results-*.json; do
+          if [ -f "$result_file" ]; then
+            scenario=$(basename "$result_file" .json | sed 's/k6-results-//')
+            echo "### $scenario Test" >> performance-report.md
+            
+            # Extract and format metrics
+            cat "$result_file" | jq -r '
+              .metrics | 
+              "- **Requests**: " + (.http_reqs.count | tostring) + 
+              "\n- **P95 Latency**: " + (.http_req_duration.values.p95 | tostring) + "ms" +
+              "\n- **Error Rate**: " + ((.http_req_failed.rate * 100) | tostring) + "%" +
+              "\n- **Throughput**: " + (.http_reqs.rate | tostring) + " req/s"
+            ' >> performance-report.md
+            echo "" >> performance-report.md
+          fi
+        done
+    
+    - name: Comment PR with performance results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          if (fs.existsSync('performance-report.md')) {
+            const report = fs.readFileSync('performance-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Performance Test Results\n\n${report}\n\n_Automated performance testing by AutoWeave CI_`
+            });
+          }
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        if [ ! -z "$APP_PID" ]; then
+          kill $APP_PID || true
+        fi
+
+  benchmark-comparison:
+    name: Performance Benchmark Comparison
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'pnpm'
+    
+    - name: Install dependencies
+      run: |
+        npm install -g pnpm
+        pnpm install --frozen-lockfile
+    
+    - name: Run current branch benchmarks
+      run: |
+        pnpm build
+        pnpm test:performance --json --outputFile=current-performance.json
+    
+    - name: Checkout base branch
+      run: |
+        git checkout ${{ github.base_ref }}
+        pnpm install --frozen-lockfile
+        pnpm build
+    
+    - name: Run base branch benchmarks
+      run: |
+        pnpm test:performance --json --outputFile=base-performance.json
+    
+    - name: Compare performance
+      run: |
+        node scripts/compare-performance.js base-performance.json current-performance.json > performance-comparison.md
+    
+    - name: Upload comparison results
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-comparison
+        path: |
+          performance-comparison.md
+          base-performance.json
+          current-performance.json
+    
+    - name: Comment comparison on PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          if (fs.existsSync('performance-comparison.md')) {
+            const comparison = fs.readFileSync('performance-comparison.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Performance Comparison\n\n${comparison}\n\n_Comparing ${context.payload.pull_request.head.sha.slice(0, 7)} with ${context.payload.pull_request.base.sha.slice(0, 7)}_`
+            });
+          }

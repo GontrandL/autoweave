@@ -1,0 +1,60 @@
+{
+  "name": "@autoweave/observability",
+  "version": "1.0.0",
+  "description": "AutoWeave observability with OpenTelemetry tracing, metrics, and logging",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.6.0",
+    "@opentelemetry/sdk-node": "^0.45.0",
+    "@opentelemetry/sdk-trace-node": "^1.18.1",
+    "@opentelemetry/sdk-metrics": "^1.18.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.39.4",
+    "@opentelemetry/resources": "^1.18.1",
+    "@opentelemetry/semantic-conventions": "^1.18.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.45.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.45.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.7",
+    "typescript": "^5.6.3"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "observability",
+    "opentelemetry",
+    "tracing",
+    "metrics",
+    "logging",
+    "autoweave"
+  ],
+  "author": "AutoWeave Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autoweave/autoweave.git",
+    "directory": "packages/observability"
+  }
+}

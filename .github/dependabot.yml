@@ -1,10 +1,11 @@
 version: 2
 updates:
-  # Enable version updates for npm
+  # Enable version updates for npm - root package
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
       time: "06:00"
       timezone: "UTC"
     open-pull-requests-limit: 10
@@ -18,19 +19,15 @@ updates:
       include: "scope"
     groups:
       development-dependencies:
+        dependency-type: "development"
         patterns:
           - "@types/*"
           - "eslint*"
           - "jest*"
           - "prettier*"
+          - "typescript"
       production-dependencies:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "@types/*"
-          - "eslint*"
-          - "jest*"
-          - "prettier*"
+        dependency-type: "production"
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -48,47 +45,190 @@ updates:
     commit-message:
       prefix: "ci"
 
-  # Enable version updates for Docker
-  - package-ecosystem: "docker"
+  # Monorepo packages
+  - package-ecosystem: "npm"
     directory: "/packages/core"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "autoweave/devops-team"
     labels:
       - "dependencies"
-      - "docker"
-
-  - package-ecosystem: "docker"
+      - "package:core"
+      
+  - package-ecosystem: "npm"
     directory: "/packages/memory"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "autoweave/devops-team"
     labels:
       - "dependencies"
-      - "docker"
-
-  - package-ecosystem: "docker"
+      - "package:memory"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/agents"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:agents"
+      
+  - package-ecosystem: "npm"
     directory: "/packages/backend"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "autoweave/devops-team"
+    labels:
+      - "dependencies"
+      - "package:backend"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/job-queue"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:job-queue"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/auto-debugger"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:auto-debugger"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/plugin-loader"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:plugin-loader"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/usb-daemon"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:usb-daemon"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/observability"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:observability"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/cli"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:cli"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/integrations"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:integrations"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/deployment"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:deployment"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/queue"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:queue"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/graphql"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:graphql"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/auth"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:auth"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/ui"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:ui"
+      
+  - package-ecosystem: "npm"
+    directory: "/packages/shared"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "package:shared"
+      
+  # UI apps
+  - package-ecosystem: "npm"
+    directory: "/apps/admin-ui"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "app:admin-ui"
+      
+  - package-ecosystem: "npm"
+    directory: "/apps/dev-studio"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "app:dev-studio"
+      
+  - package-ecosystem: "npm"
+    directory: "/apps/user-ui"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "app:user-ui"
+      
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
     labels:
       - "dependencies"
       - "docker"
-
-  # Enable version updates for Python
-  - package-ecosystem: "pip"
-    directory: "/packages/memory"
+      
+  - package-ecosystem: "docker"
+    directory: "/packages/deployment/src"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "autoweave/memory-team"
+    labels:
+      - "dependencies"
+      - "docker"
+      
+  # Python dependencies for memory bridge
+  - package-ecosystem: "pip"
+    directory: "/scripts"
+    schedule:
+      interval: "weekly"
     labels:
       - "dependencies"
       - "python"
-    commit-message:
-      prefix: "chore"
-      include: "scope"

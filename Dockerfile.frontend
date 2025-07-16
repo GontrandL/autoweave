@@ -1,0 +1,45 @@
+FROM node:20-alpine AS base
+RUN corepack enable pnpm
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/graphql/package.json ./packages/graphql/
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/utils/package.json ./packages/utils/
+COPY apps/admin-ui/package.json ./apps/admin-ui/
+COPY apps/dev-studio/package.json ./apps/dev-studio/
+COPY apps/user-ui/package.json ./apps/user-ui/
+RUN pnpm install --frozen-lockfile
+
+# Build packages and applications
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm build
+
+# Production image for Admin UI
+FROM base AS admin-ui
+COPY --from=builder /app/apps/admin-ui/.next/standalone ./
+COPY --from=builder /app/apps/admin-ui/.next/static ./apps/admin-ui/.next/static
+COPY --from=builder /app/apps/admin-ui/public ./apps/admin-ui/public
+EXPOSE 3000
+CMD ["node", "apps/admin-ui/server.js"]
+
+# Production image for Dev Studio
+FROM base AS dev-studio
+COPY --from=builder /app/apps/dev-studio/.next/standalone ./
+COPY --from=builder /app/apps/dev-studio/.next/static ./apps/dev-studio/.next/static
+COPY --from=builder /app/apps/dev-studio/public ./apps/dev-studio/public
+EXPOSE 3001
+CMD ["node", "apps/dev-studio/server.js"]
+
+# Production image for User UI
+FROM base AS user-ui
+COPY --from=builder /app/apps/user-ui/.next/standalone ./
+COPY --from=builder /app/apps/user-ui/.next/static ./apps/user-ui/.next/static
+COPY --from=builder /app/apps/user-ui/public ./apps/user-ui/public
+EXPOSE 3002
+CMD ["node", "apps/user-ui/server.js"]

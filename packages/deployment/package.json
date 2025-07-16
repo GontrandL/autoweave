@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "build": "echo \"No build step\"",
-    "lint": "eslint src"
+    "lint": "eslint src --ext .ts,.js"
   },
   "dependencies": {},
   "devDependencies": {}

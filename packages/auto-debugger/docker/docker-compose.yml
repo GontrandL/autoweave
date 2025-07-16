@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  playwright-mcp:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: autoweave-playwright-mcp
+    ports:
+      - "${MCP_HOST_PORT:-8931}:8931"
+    environment:
+      - HEADLESS=${HEADLESS:-true}
+      - DISPLAY=${DISPLAY:-:99}
+      - NODE_ENV=${NODE_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - AUTOWEAVE_API_URL=${AUTOWEAVE_API_URL:-http://autoweave-backend:3000}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev/shm:/dev/shm
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - autoweave-network
+    security_opt:
+      - seccomp:unconfined  # Required for Chromium
+    cap_add:
+      - SYS_ADMIN  # Required for sandbox
+    init: true  # Proper signal handling
+    ipc: host  # Shared memory optimization
+    restart: unless-stopped
+    depends_on:
+      - xvfb
+
+  xvfb:
+    image: alpine:latest
+    container_name: autoweave-xvfb
+    command: |
+      sh -c "
+        apk add --no-cache xvfb &&
+        Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp -nolisten unix
+      "
+    environment:
+      - DISPLAY=:99
+    networks:
+      - autoweave-network
+    restart: unless-stopped
+
+  # Optional: Claude Code MCP integration
+  claude-code-mcp:
+    image: alpine:latest
+    container_name: autoweave-claude-mcp
+    command: |
+      sh -c "
+        apk add --no-cache nodejs npm git &&
+        npm install -g @anthropic/mcp-server &&
+        mcp-server serve --port 8930 --config /app/config/mcp.json
+      "
+    ports:
+      - "8930:8930"
+    environment:
+      - NODE_ENV=production
+      - MCP_LOG_LEVEL=INFO
+      - PLAYWRIGHT_MCP_URL=ws://playwright-mcp:8931
+    volumes:
+      - ./config:/app/config
+      - ./prompts:/app/prompts
+    networks:
+      - autoweave-network
+    restart: unless-stopped
+    depends_on:
+      - playwright-mcp
+
+networks:
+  autoweave-network:
+    external: true
+    name: autoweave_default
+
+volumes:
+  playwright-data:
+  xvfb-data:

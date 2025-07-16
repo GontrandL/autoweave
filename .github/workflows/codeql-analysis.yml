@@ -1,0 +1,108 @@
+name: "CodeQL Security Analysis"
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run CodeQL analysis every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript', 'typescript' ]
+        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        # If you wish to specify custom queries, you can do so here or in a config file.
+        queries: security-and-quality
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+        
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        run_install: false
+
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Build project
+      run: pnpm run build
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{ matrix.language }}"
+        
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+        
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        run_install: false
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      
+    - name: Run npm audit
+      run: pnpm audit --audit-level=moderate
+      continue-on-error: true
+      
+    - name: Upload npm audit results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: npm-audit-results
+        path: npm-audit.json
+        retention-days: 30

@@ -1,5 +1,6 @@
 const { Logger } = require('@autoweave/shared');
 const fetch = require('node-fetch');
+// const { createAutoWeaveBridge } = require('@autoweave/auto-debugger');
 
 /**
  * DebuggingAgent - Agent intelligent pour le debugging avec OpenTelemetry
@@ -30,6 +31,12 @@ class DebuggingAgent {
         
         this.llm = llm;
         this.memoryManager = memoryManager;
+        
+        // Initialize auto-debugger bridge if enabled
+        this.autoDebuggerBridge = null;
+        if (config.enableAutoDebugger) {
+            this.initializeAutoDebugger(config);
+        }
         
         // Patterns de problèmes connus
         this.knownPatterns = {
@@ -558,6 +565,153 @@ Please provide:
             return 'warning';
         }
         return 'info';
+    }
+
+    /**
+     * Initialize Auto-Debugger Bridge
+     */
+    async initializeAutoDebugger(config) {
+        try {
+            // Lazy load to avoid circular dependency
+            const { createAutoWeaveBridge } = require('@autoweave/auto-debugger');
+            this.autoDebuggerBridge = createAutoWeaveBridge({
+                mcpPort: config.autoDebuggerPort || 8931,
+                apiUrl: config.apiUrl || 'http://localhost:3000',
+                headless: config.headless !== false,
+                devtools: config.devtools || false
+            });
+
+            await this.autoDebuggerBridge.initialize();
+            
+            // Setup event listeners
+            this.autoDebuggerBridge.on('error-detected', ({ sessionId, error }) => {
+                this.logger.error('Auto-debugger detected error:', error);
+                this.handleAutoDebuggerError(sessionId, error);
+            });
+
+            this.autoDebuggerBridge.on('suggestions-ready', ({ sessionId, suggestions }) => {
+                this.logger.info('Auto-debugger generated suggestions:', suggestions.length);
+                this.processAutoDebuggerSuggestions(sessionId, suggestions);
+            });
+
+            this.logger.info('Auto-debugger bridge initialized successfully');
+        } catch (error) {
+            this.logger.error('Failed to initialize auto-debugger:', error);
+            this.autoDebuggerBridge = null;
+        }
+    }
+
+    /**
+     * Diagnose with Auto-Debugger for web applications
+     */
+    async diagnoseWebApp(url, workflowId) {
+        if (!this.autoDebuggerBridge) {
+            throw new Error('Auto-debugger not initialized');
+        }
+
+        try {
+            // Create debug session
+            const sessionId = await this.autoDebuggerBridge.createDebugSession(workflowId, url);
+            
+            // Wait for analysis
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Allow time for page load
+            
+            // Get debug report
+            const report = await this.autoDebuggerBridge.analyzeWorkflow(sessionId);
+            
+            // Convert to standard diagnosis format
+            const diagnosis = {
+                timestamp: new Date().toISOString(),
+                identifier: url,
+                telemetryData: {
+                    logs: { logs: report.logs, totalCount: report.summary.totalLogs },
+                    errors: report.errors,
+                    networkIssues: report.networkIssues
+                },
+                knownPatterns: report.errors.map(e => ({
+                    pattern: e.name,
+                    type: 'javascript_error',
+                    severity: 'high',
+                    solution: 'See auto-generated fixes'
+                })),
+                rootCause: report.summary.criticalIssues[0] || 'Multiple issues detected',
+                impact: this.assessWebAppImpact(report),
+                likelihood: report.errors.length > 0 ? 'high' : 'low',
+                autoDebuggerReport: report
+            };
+
+            // Apply fixes if requested
+            if (report.suggestions.length > 0) {
+                await this.autoDebuggerBridge.applyFixes(sessionId, report.suggestions);
+            }
+
+            return diagnosis;
+        } catch (error) {
+            this.logger.error('Web app diagnosis failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle auto-debugger error events
+     */
+    async handleAutoDebuggerError(sessionId, error) {
+        // Store error in memory for analysis
+        if (this.memoryManager) {
+            await this.memoryManager.addMemory({
+                type: 'auto_debugger_error',
+                sessionId,
+                error,
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
+
+    /**
+     * Process auto-debugger suggestions
+     */
+    async processAutoDebuggerSuggestions(sessionId, suggestions) {
+        // Store suggestions in memory
+        if (this.memoryManager) {
+            await this.memoryManager.addMemory({
+                type: 'auto_debugger_suggestions',
+                sessionId,
+                suggestions,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Generate actionable recommendations
+        const recommendations = suggestions.map(s => ({
+            priority: s.severity === 'error' ? 'high' : 'medium',
+            action: s.message,
+            implementation: s.fix,
+            rationale: `Auto-detected ${s.type} issue`,
+            confidence: s.metadata?.autoweaveContext?.confidence || 0.8
+        }));
+
+        return recommendations;
+    }
+
+    /**
+     * Assess impact for web applications
+     */
+    assessWebAppImpact(report) {
+        if (report.summary.criticalIssues.length > 0) return 'critical';
+        if (report.errors.length > 10) return 'high';
+        if (report.networkIssues.filter(i => i.status >= 500).length > 0) return 'high';
+        if (report.errors.length > 0) return 'medium';
+        return 'low';
+    }
+
+    /**
+     * Cleanup auto-debugger resources
+     */
+    async cleanup() {
+        if (this.autoDebuggerBridge) {
+            await this.autoDebuggerBridge.cleanup();
+            this.autoDebuggerBridge = null;
+        }
     }
 }
 

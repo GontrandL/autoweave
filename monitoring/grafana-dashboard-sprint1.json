@@ -1,0 +1,291 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Sprint 1 Performance Dashboard",
+    "tags": ["autoweave", "performance", "sprint1"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "5s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "USB Event Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(usb_event_latency_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(usb_event_latency_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(usb_event_latency_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Latency (ms)",
+            "max": 100
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 80,
+            "colorMode": "critical",
+            "op": "gt"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Plugin Load Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(plugin_load_time_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(plugin_load_time_bucket[5m]))",
+            "legendFormat": "p95"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Load Time (ms)",
+            "max": 250
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 200,
+            "colorMode": "critical",
+            "op": "gt"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes",
+            "legendFormat": "RSS"
+          },
+          {
+            "expr": "nodejs_heap_size_used_bytes",
+            "legendFormat": "Heap Used"
+          },
+          {
+            "expr": "nodejs_heap_size_total_bytes",
+            "legendFormat": "Heap Total"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Bytes",
+            "logBase": 1
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "id": 4,
+        "title": "Event Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(usb_events_processed_total[5m])",
+            "legendFormat": "Events/sec"
+          },
+          {
+            "expr": "rate(plugin_messages_sent_total[5m])",
+            "legendFormat": "Messages/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate (per second)"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "id": 5,
+        "title": "Worker Pool Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "worker_pool_active_workers",
+            "legendFormat": "Active Workers"
+          },
+          {
+            "expr": "worker_pool_queue_size",
+            "legendFormat": "Queue Size"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 5
+                },
+                {
+                  "color": "red",
+                  "value": 10
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 }
+      },
+      {
+        "id": 6,
+        "title": "Cache Hit Rates",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "manifest_cache_hit_rate",
+            "legendFormat": "Manifest Cache"
+          },
+          {
+            "expr": "device_cache_hit_rate",
+            "legendFormat": "Device Cache"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 70
+                },
+                {
+                  "color": "green",
+                  "value": 90
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 }
+      },
+      {
+        "id": 7,
+        "title": "Error Rates",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(usb_errors_total[5m])",
+            "legendFormat": "USB Errors"
+          },
+          {
+            "expr": "rate(plugin_errors_total[5m])",
+            "legendFormat": "Plugin Errors"
+          },
+          {
+            "expr": "rate(worker_errors_total[5m])",
+            "legendFormat": "Worker Errors"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Errors per second"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+      },
+      {
+        "id": 8,
+        "title": "Shutdown Performance",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "shutdown_time_seconds",
+            "legendFormat": "Component",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 3
+                },
+                {
+                  "color": "red",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 20 }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up, instance)",
+          "refresh": 1
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "prometheus",
+          "expr": "increase(deployment_timestamp[1m])",
+          "textFormat": "Deployment"
+        }
+      ]
+    }
+  }
+}

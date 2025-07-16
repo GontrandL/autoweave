@@ -1,0 +1,584 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AutoWeave - Operations Dashboard",
+    "tags": ["autoweave", "operations", "slo", "infrastructure"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "description": "Operations-focused dashboard for SLO monitoring and infrastructure health",
+    "panels": [
+      {
+        "id": 1,
+        "title": "SLO Compliance",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "slo_compliance_percentage",
+            "legendFormat": "{{slo_name}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 95},
+                {"color": "green", "value": 99}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background"
+        },
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
+        "description": "Current SLO compliance percentage"
+      },
+      {
+        "id": 2,
+        "title": "Error Budget Remaining",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "error_budget_remaining_percentage",
+            "legendFormat": "{{slo_name}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 20},
+                {"color": "green", "value": 50}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 0},
+        "description": "Remaining error budget for each SLO"
+      },
+      {
+        "id": 3,
+        "title": "Alert Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "legendFormat": "{{alertname}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background"
+        },
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 0},
+        "description": "Current active alerts"
+      },
+      {
+        "id": 4,
+        "title": "System Availability",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "avg_over_time(up{job=~\"autoweave.*\"}[5m])",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Availability",
+            "min": 0,
+            "max": 1,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "System availability by component"
+      },
+      {
+        "id": 5,
+        "title": "Error Budget Burn Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "error_budget_burn_rate",
+            "legendFormat": "{{slo_name}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Burn Rate",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Rate at which error budget is being consumed"
+      },
+      {
+        "id": 6,
+        "title": "Infrastructure Resources",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(cpu_usage_percent[5m])",
+            "legendFormat": "CPU - {{component}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(memory_usage_bytes[5m]) / 1024 / 1024",
+            "legendFormat": "Memory MB - {{component}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "CPU %",
+            "min": 0,
+            "max": 100,
+            "logBase": 1,
+            "show": true
+          },
+          {
+            "label": "Memory MB",
+            "min": 0,
+            "logBase": 1,
+            "show": true,
+            "opposite": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "CPU and memory usage by component"
+      },
+      {
+        "id": 7,
+        "title": "Disk Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "disk_usage_bytes / 1024 / 1024 / 1024",
+            "legendFormat": "Disk GB - {{component}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Disk GB",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Disk usage by component"
+      },
+      {
+        "id": 8,
+        "title": "Network I/O",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(network_bytes_sent[5m])",
+            "legendFormat": "Sent - {{component}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(network_bytes_received[5m])",
+            "legendFormat": "Received - {{component}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Bytes/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Network I/O by component"
+      },
+      {
+        "id": 9,
+        "title": "Queue Sizes",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "queue_size",
+            "legendFormat": "{{queue_name}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Queue Size",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Queue sizes by queue name"
+      },
+      {
+        "id": 10,
+        "title": "Cache Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "cache_hit_rate",
+            "legendFormat": "Hit Rate - {{cache_type}}",
+            "refId": "A"
+          },
+          {
+            "expr": "cache_size_entries",
+            "legendFormat": "Size - {{cache_type}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Hit Rate",
+            "min": 0,
+            "max": 1,
+            "logBase": 1,
+            "show": true
+          },
+          {
+            "label": "Cache Size",
+            "min": 0,
+            "logBase": 1,
+            "show": true,
+            "opposite": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Cache hit rate and size by cache type"
+      },
+      {
+        "id": 11,
+        "title": "Plugin Health",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "plugins_active",
+            "legendFormat": "Active - {{plugin_name}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(plugin_executions_total{success=\"false\"}[5m])",
+            "legendFormat": "Failures - {{plugin_name}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Active Plugins",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          },
+          {
+            "label": "Failures/sec",
+            "min": 0,
+            "logBase": 1,
+            "show": true,
+            "opposite": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "Plugin health and failure rates"
+      },
+      {
+        "id": 12,
+        "title": "SLO Violation History",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "increase(slo_violations_total[1h])",
+            "legendFormat": "{{component}} - {{slo_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 38},
+        "description": "SLO violations in the last hour"
+      },
+      {
+        "id": 13,
+        "title": "Capacity Planning",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "predict_linear(cpu_usage_percent[1h], 24*3600)",
+            "legendFormat": "CPU Projection - {{component}}",
+            "refId": "A"
+          },
+          {
+            "expr": "predict_linear(memory_usage_bytes[1h], 24*3600)",
+            "legendFormat": "Memory Projection - {{component}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Projected Usage",
+            "min": 0,
+            "logBase": 1,
+            "show": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 38},
+        "legend": {
+          "show": true,
+          "values": false,
+          "min": false,
+          "max": false,
+          "current": false,
+          "total": false,
+          "avg": false
+        },
+        "description": "24-hour resource usage projection"
+      },
+      {
+        "id": 14,
+        "title": "Recent Incidents",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job=\"autoweave\",level=\"error\",severity=\"high\"}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 46},
+        "options": {
+          "showLabels": true,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": true
+        },
+        "description": "Recent high-severity incidents"
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "slo",
+          "type": "query",
+          "query": "label_values(slo_compliance_percentage, slo_name)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        },
+        {
+          "name": "environment",
+          "type": "constant",
+          "query": "production",
+          "current": {
+            "selected": true,
+            "text": "production",
+            "value": "production"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "SLO Violations",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "increase(slo_violations_total[1m])",
+          "iconColor": "red",
+          "titleFormat": "SLO Violation: {{slo_type}}"
+        },
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "increase(deployments_total[1m])",
+          "iconColor": "green",
+          "titleFormat": "Deployment"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": ["autoweave"],
+        "title": "Developer Dashboard",
+        "type": "dashboards",
+        "url": "/d/dev/autoweave-developer"
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": ["autoweave"],
+        "title": "Business Dashboard",
+        "type": "dashboards",
+        "url": "/d/business/autoweave-business"
+      }
+    ]
+  }
+}
