@@ -30,7 +30,7 @@
     "@opentelemetry/sdk-node": "^0.44.0"
   },
   "devDependencies": {
-    "@types/node": "^20.19.7",
+    "@types/node": "^24.0.14",
     "@types/usb": "^2.0.0",
     "typescript": "^5.6.3"
   },
